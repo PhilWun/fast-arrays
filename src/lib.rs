@@ -53,7 +53,7 @@ fn array_to_m512(value: [f32; 16]) -> __m512 {
     value.into()
 }
 
-struct Array<const D: usize> {
+pub struct Array<const D: usize> {
     data: Vec<__m512>,
     shape: [usize; D]
 }
