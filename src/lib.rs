@@ -89,6 +89,29 @@ impl From<Array<1>> for Vec<f32> {
     }
 }
 
+impl From<Vec<f32>> for Array<1> {
+    fn from(value: Vec<f32>) -> Self {
+        let register_count = value.len().div_ceil(16);
+        let mut data: Vec<__m512> = Vec::with_capacity(register_count);
+        let mut index = 0;
+
+        for _ in 0..register_count {
+            let mut new_register_data = [0f32; 16];
+
+            for i in 0..16 {
+                if index < value.len() {
+                    new_register_data[i] = value[index];
+                    index += 1;
+                }
+            }
+
+            data.push(array_to_m512(new_register_data));
+        }
+
+        Array { data: data, shape: [value.len()] }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
