@@ -1,6 +1,6 @@
 #![feature(portable_simd)]
 #![feature(stdsimd)]
-use std::{simd::{Simd, f32x16}, arch::x86_64::{_mm512_fmadd_ps, __m512}, time::Instant};
+use std::{simd::{Simd, f32x16}, arch::x86_64::{_mm512_fmadd_ps, __m512}, time::Instant, ops::{Index, IndexMut}};
 
 pub fn example() {
     let c = [3f32; 16];
@@ -69,6 +69,35 @@ impl Array<1> {
             shape: [shape]
         }
     }
+
+    pub fn get(&self, index: usize) -> Option<f32> {
+        if index >= self.shape[0] {
+            return None
+        }
+
+        let register_index = index / 16;
+        let value_index = index % 16;
+
+        let value = m512_to_array(self.data[register_index])[value_index];
+
+        Some(value)
+    }
+
+    pub fn set(&mut self, index: usize, value: f32) -> Option<()> {
+        if index >= self.shape[0] {
+            return None
+        }
+
+        let register_index = index / 16;
+        let value_index = index % 16;
+
+        let mut new_register = m512_to_array(self.data[register_index]);
+        new_register[value_index] = value;
+
+        self.data[register_index] = array_to_m512(new_register);
+
+        Some(())
+    }
 }
 
 impl From<Array<1>> for Vec<f32> {
@@ -79,8 +108,12 @@ impl From<Array<1>> for Vec<f32> {
         for register in value.data {
             let register = m512_to_array(register);
 
-            while index < converted.len() {
-                converted[index] = register[index % 16];
+            for i in 0..16 {
+                if index >= value.shape[0] {
+                    break;
+                }
+
+                converted[index] = register[i];
                 index += 1;
             }
         }
@@ -156,7 +189,7 @@ mod tests {
 
     #[test]
     fn conversion_small() {
-        let value = vec![0.0, 1.0, 3.0];
+        let value = vec![0.0, 1.0, 2.0];
         let converted: Array<1> = value.clone().into();
         let converted_back: Vec<f32> = converted.into();
 
@@ -165,7 +198,7 @@ mod tests {
 
     #[test]
     fn conversion_one_full_register() {
-        let value = vec![0.0, 1.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0];
+        let value = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0];
         let converted: Array<1> = value.clone().into();
         let converted_back: Vec<f32> = converted.into();
 
@@ -174,10 +207,33 @@ mod tests {
 
     #[test]
     fn conversion_two_register() {
-        let value = vec![0.0, 1.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0];
+        let value = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0];
         let converted: Array<1> = value.clone().into();
         let converted_back: Vec<f32> = converted.into();
 
         assert_eq!(converted_back, value);
+    }
+
+    #[test]
+    fn get() {
+        let array: Array<1> = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0].into();
+
+        assert_eq!(array.get(0), Some(0.0));
+        assert_eq!(array.get(15), Some(15.0));
+        assert_eq!(array.get(16), Some(16.0));
+        assert_eq!(array.get(17), None);
+    }
+
+    #[test]
+    fn set() {
+        let mut array: Array<1> = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0].into();
+
+        assert_eq!(array.set(0, 42.0), Some(()));
+        assert_eq!(array.set(15, 37.5), Some(()));
+        assert_eq!(array.set(16, 31.9), Some(()));
+        assert_eq!(array.set(17, 95.4), None);
+
+        let data: Vec<f32> = array.into();
+        assert_eq!(data, vec![42.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 37.5, 31.9]);
     }
 }
