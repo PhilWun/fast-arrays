@@ -100,9 +100,9 @@ mod tests {
         assert_eq!(array.shape, [3]);
         assert_eq!(array.data.len(), 1);
         
-        let data: Vec<f32> = array.into();
+        let data = m512_to_array(array.data[0]);
 
-        assert_eq!(data, vec![0f32; 3]);
+        assert_eq!(data[0..3], vec![0f32; 3]);
     }
 
     #[test]
@@ -112,9 +112,9 @@ mod tests {
         assert_eq!(array.shape, [16]);
         assert_eq!(array.data.len(), 1);
         
-        let data: Vec<f32> = array.into();
+        let data = m512_to_array(array.data[0]);
 
-        assert_eq!(data, vec![0f32; 16]);
+        assert_eq!(data, [0f32; 16]);
     }
 
     #[test]
@@ -124,8 +124,10 @@ mod tests {
         assert_eq!(array.shape, [17]);
         assert_eq!(array.data.len(), 2);
         
-        let data: Vec<f32> = array.into();
+        let data1 = m512_to_array(array.data[0]);
+        let data2 = m512_to_array(array.data[0]);
 
-        assert_eq!(data, vec![0f32; 17]);
+        assert_eq!(data1, [0f32; 16]);
+        assert_eq!(data2[0..1], [0f32; 1]);
     }
 }
