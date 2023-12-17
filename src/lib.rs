@@ -153,4 +153,31 @@ mod tests {
         assert_eq!(data1, [0f32; 16]);
         assert_eq!(data2[0..1], [0f32; 1]);
     }
+
+    #[test]
+    fn conversion_small() {
+        let value = vec![0.0, 1.0, 3.0];
+        let converted: Array<1> = value.clone().into();
+        let converted_back: Vec<f32> = converted.into();
+
+        assert_eq!(converted_back, value);
+    }
+
+    #[test]
+    fn conversion_one_full_register() {
+        let value = vec![0.0, 1.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0];
+        let converted: Array<1> = value.clone().into();
+        let converted_back: Vec<f32> = converted.into();
+
+        assert_eq!(converted_back, value);
+    }
+
+    #[test]
+    fn conversion_two_register() {
+        let value = vec![0.0, 1.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0];
+        let converted: Array<1> = value.clone().into();
+        let converted_back: Vec<f32> = converted.into();
+
+        assert_eq!(converted_back, value);
+    }
 }
