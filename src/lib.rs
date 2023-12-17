@@ -1,6 +1,10 @@
 #![feature(portable_simd)]
 #![feature(stdsimd)]
-use std::{simd::{Simd, f32x16}, arch::x86_64::{_mm512_fmadd_ps, __m512}, time::Instant, ops::{Index, IndexMut}};
+use std::{
+    arch::x86_64::{__m512, _mm512_fmadd_ps},
+    simd::{f32x16, Simd},
+    time::Instant,
+};
 
 pub fn example() {
     let c = [3f32; 16];
@@ -55,7 +59,7 @@ fn array_to_m512(value: [f32; 16]) -> __m512 {
 
 pub struct Array<const D: usize> {
     data: Vec<__m512>,
-    shape: [usize; D]
+    shape: [usize; D],
 }
 
 impl Array<1> {
@@ -66,13 +70,13 @@ impl Array<1> {
 
         Self {
             data,
-            shape: [shape]
+            shape: [shape],
         }
     }
 
     pub fn get(&self, index: usize) -> Option<f32> {
         if index >= self.shape[0] {
-            return None
+            return None;
         }
 
         let register_index = index / 16;
@@ -85,7 +89,7 @@ impl Array<1> {
 
     pub fn set(&mut self, index: usize, value: f32) -> Option<()> {
         if index >= self.shape[0] {
-            return None
+            return None;
         }
 
         let register_index = index / 16;
@@ -141,7 +145,10 @@ impl From<Vec<f32>> for Array<1> {
             data.push(array_to_m512(new_register_data));
         }
 
-        Array { data: data, shape: [value.len()] }
+        Array {
+            data: data,
+            shape: [value.len()],
+        }
     }
 }
 
@@ -155,7 +162,7 @@ mod tests {
 
         assert_eq!(array.shape, [3]);
         assert_eq!(array.data.len(), 1);
-        
+
         let data = m512_to_array(array.data[0]);
 
         assert_eq!(data[0..3], vec![0f32; 3]);
@@ -167,7 +174,7 @@ mod tests {
 
         assert_eq!(array.shape, [16]);
         assert_eq!(array.data.len(), 1);
-        
+
         let data = m512_to_array(array.data[0]);
 
         assert_eq!(data, [0f32; 16]);
@@ -179,7 +186,7 @@ mod tests {
 
         assert_eq!(array.shape, [17]);
         assert_eq!(array.data.len(), 2);
-        
+
         let data1 = m512_to_array(array.data[0]);
         let data2 = m512_to_array(array.data[0]);
 
@@ -198,7 +205,9 @@ mod tests {
 
     #[test]
     fn conversion_one_full_register() {
-        let value = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0];
+        let value = vec![
+            0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0,
+        ];
         let converted: Array<1> = value.clone().into();
         let converted_back: Vec<f32> = converted.into();
 
@@ -207,7 +216,10 @@ mod tests {
 
     #[test]
     fn conversion_two_register() {
-        let value = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0];
+        let value = vec![
+            0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0,
+            16.0,
+        ];
         let converted: Array<1> = value.clone().into();
         let converted_back: Vec<f32> = converted.into();
 
@@ -216,7 +228,11 @@ mod tests {
 
     #[test]
     fn get() {
-        let array: Array<1> = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0].into();
+        let array: Array<1> = vec![
+            0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0,
+            16.0,
+        ]
+        .into();
 
         assert_eq!(array.get(0), Some(0.0));
         assert_eq!(array.get(15), Some(15.0));
@@ -226,7 +242,11 @@ mod tests {
 
     #[test]
     fn set() {
-        let mut array: Array<1> = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0].into();
+        let mut array: Array<1> = vec![
+            0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0,
+            16.0,
+        ]
+        .into();
 
         assert_eq!(array.set(0, 42.0), Some(()));
         assert_eq!(array.set(15, 37.5), Some(()));
@@ -234,6 +254,12 @@ mod tests {
         assert_eq!(array.set(17, 95.4), None);
 
         let data: Vec<f32> = array.into();
-        assert_eq!(data, vec![42.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 37.5, 31.9]);
+        assert_eq!(
+            data,
+            vec![
+                42.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0,
+                37.5, 31.9
+            ]
+        );
     }
 }
