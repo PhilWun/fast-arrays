@@ -104,6 +104,29 @@ impl Array<1> {
     }
 }
 
+impl Add for Array<1> {
+    type Output = Result<Self, ()>;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        if self.shape[0] != rhs.shape[0] {
+            return Err(());
+        }
+
+        let mut new_data = Vec::with_capacity(self.data.len());
+
+        unsafe {
+            for (l, r) in self.data.iter().zip(rhs.data.iter()) {
+                new_data.push(_mm512_add_ps(*l, *r));
+            }
+        }
+
+        Ok(Self {
+            data: new_data,
+            shape: self.shape.clone(),
+        })
+    }
+}
+
 impl From<Array<1>> for Vec<f32> {
     fn from(value: Array<1>) -> Self {
         let mut converted = vec![0f32; value.shape[0]];
@@ -261,5 +284,32 @@ mod tests {
                 37.5, 31.9
             ]
         );
+    }
+
+    #[test]
+    fn add_small() {
+        let array1: Array<1> = vec![1.0, 2.0, 3.0].into();
+        let array2: Array<1> = vec![2.0, 3.0, 4.0].into();
+        let sum: Vec<f32> = (array1 + array2).unwrap().into();
+
+        assert_eq!(sum, vec![3.0, 5.0, 7.0]);
+    }
+
+    #[test]
+    fn add_one_full_register() {
+        let array1: Array<1> = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0].into();
+        let array2: Array<1> = vec![2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0].into();
+        let sum: Vec<f32> = (array1 + array2).unwrap().into();
+
+        assert_eq!(sum, vec![3.0, 5.0, 7.0, 9.0, 11.0, 13.0, 15.0, 17.0, 19.0, 21.0, 23.0, 25.0, 27.0, 29.0, 31.0, 33.0]);
+    }
+
+    #[test]
+    fn add_two_registers() {
+        let array1: Array<1> = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0].into();
+        let array2: Array<1> = vec![2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0].into();
+        let sum: Vec<f32> = (array1 + array2).unwrap().into();
+
+        assert_eq!(sum, vec![3.0, 5.0, 7.0, 9.0, 11.0, 13.0, 15.0, 17.0, 19.0, 21.0, 23.0, 25.0, 27.0, 29.0, 31.0, 33.0, 35.0]);
     }
 }
