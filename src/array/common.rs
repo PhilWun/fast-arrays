@@ -1,3 +1,6 @@
+#[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
+use std::arch::x86_64::__m512;
+
 pub struct Array<const D: usize> {
     #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
     pub(super) data: Vec<__m512>,
