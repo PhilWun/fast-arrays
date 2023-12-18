@@ -1,5 +1,5 @@
 use std::{
-    arch::x86_64::{__m512, _mm512_add_ps, _mm512_sub_ps, _mm512_mul_ps, _mm512_div_ps},
+    arch::x86_64::{__m512, _mm512_add_ps, _mm512_sub_ps, _mm512_mul_ps, _mm512_div_ps, _mm512_max_ps, _mm512_min_ps},
     ops::{Add, Sub, Mul, Div},
     simd::f32x16
 };
@@ -55,6 +55,44 @@ impl Array<1> {
         self.data[register_index] = array_to_m512(new_register);
 
         Some(())
+    }
+
+    pub fn max(&self, other: &Self) -> Result<Self, ()> {
+        if self.shape[0] != other.shape[0] {
+            return Err(());
+        }
+
+        let mut new_data = Vec::with_capacity(self.data.len());
+
+        unsafe {
+            for (l, r) in self.data.iter().zip(other.data.iter()) {
+                new_data.push(_mm512_max_ps(*l, *r));
+            }
+        }
+
+        Ok(Self {
+            data: new_data,
+            shape: self.shape.clone()
+        })
+    }
+
+    pub fn min(&self, other: &Self) -> Result<Self, ()> {
+        if self.shape[0] != other.shape[0] {
+            return Err(());
+        }
+
+        let mut new_data = Vec::with_capacity(self.data.len());
+
+        unsafe {
+            for (l, r) in self.data.iter().zip(other.data.iter()) {
+                new_data.push(_mm512_min_ps(*l, *r));
+            }
+        }
+
+        Ok(Self {
+            data: new_data,
+            shape: self.shape.clone()
+        })
     }
 }
 
