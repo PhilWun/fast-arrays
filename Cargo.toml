@@ -3,6 +3,14 @@ name = "fast_arrays"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "fast_arrays"
+path = "src/lib.rs"
+
+[[bin]]
+name = "example_code"
+path = "src/bin/example_code.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [profile.test]
