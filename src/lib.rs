@@ -1,11 +1,16 @@
 #![feature(portable_simd)]
 #![feature(stdsimd)]
+
+#[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
 use std::{
-    arch::x86_64::{__m512, _mm512_fmadd_ps},
+    arch::x86_64::{__m512, _mm512_fmadd_ps, _mm512_add_ps},
     simd::{f32x16, Simd},
     time::Instant,
 };
 
+use std::ops::Add;
+
+#[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
 pub fn example() {
     let c = [3f32; 16];
 
@@ -47,21 +52,27 @@ pub fn example() {
     println!("{}s", (time2 - time1).as_secs_f32());
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
 fn m512_to_array(value: __m512) -> [f32; 16] {
     let value: f32x16 = value.into();
     value.into()
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
 fn array_to_m512(value: [f32; 16]) -> __m512 {
     let value: f32x16 = value.into();
     value.into()
 }
 
 pub struct Array<const D: usize> {
+    #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
     data: Vec<__m512>,
+    #[cfg(not(all(target_arch = "x86_64", target_feature = "avx512f")))]
+    data: Vec<f32>,
     shape: [usize; D],
 }
 
+#[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
 impl Array<1> {
     pub fn zeros(shape: usize) -> Self {
         let register_count = shape.div_ceil(16);
@@ -104,6 +115,25 @@ impl Array<1> {
     }
 }
 
+#[cfg(not(all(target_arch = "x86_64", target_feature = "avx512f")))]
+impl Array<1> {
+    pub fn zeros(shape: usize) -> Self {
+        Self {
+            data: vec![0.0; shape],
+            shape: [shape]
+        }
+    }
+
+    pub fn get(&self, index: usize) -> Option<f32> {
+        self.data.get(index).map(|x| *x)
+    }
+
+    pub fn set(&mut self, index: usize, value: f32) -> Option<()> {
+        self.data.get_mut(index).map(|x| {*x = value})
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
 impl Add for Array<1> {
     type Output = Result<Self, ()>;
 
@@ -127,6 +157,29 @@ impl Add for Array<1> {
     }
 }
 
+#[cfg(not(all(target_arch = "x86_64", target_feature = "avx512f")))]
+impl Add for Array<1> {
+    type Output = Result<Self, ()>;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        if self.shape[0] != rhs.shape[0] {
+            return Err(());
+        }
+
+        let mut new_data = Vec::with_capacity(self.data.len());
+
+        for (l, r) in self.data.iter().zip(rhs.data.iter()) {
+            new_data.push(*l + *r);
+        }
+
+        Ok(Self {
+            data: new_data,
+            shape: self.shape.clone(),
+        })
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
 impl From<Array<1>> for Vec<f32> {
     fn from(value: Array<1>) -> Self {
         let mut converted = vec![0f32; value.shape[0]];
@@ -149,6 +202,14 @@ impl From<Array<1>> for Vec<f32> {
     }
 }
 
+#[cfg(not(all(target_arch = "x86_64", target_feature = "avx512f")))]
+impl From<Array<1>> for Vec<f32> {
+    fn from(value: Array<1>) -> Self {
+        value.data.clone()
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
 impl From<Vec<f32>> for Array<1> {
     fn from(value: Vec<f32>) -> Self {
         let register_count = value.len().div_ceil(16);
@@ -175,10 +236,23 @@ impl From<Vec<f32>> for Array<1> {
     }
 }
 
+#[cfg(not(all(target_arch = "x86_64", target_feature = "avx512f")))]
+impl From<Vec<f32>> for Array<1> {
+    fn from(value: Vec<f32>) -> Self {
+        let len = value.len();
+
+        Array {
+            data: value,
+            shape: [len],
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
     #[test]
     fn zeros_1d_small() {
         let array = Array::<1>::zeros(3);
@@ -186,11 +260,14 @@ mod tests {
         assert_eq!(array.shape, [3]);
         assert_eq!(array.data.len(), 1);
 
-        let data = m512_to_array(array.data[0]);
+        let data = array.data;
+        #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
+        let data = m512_to_array(data[0]);
 
         assert_eq!(data[0..3], vec![0f32; 3]);
     }
 
+    #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
     #[test]
     fn zeros_1d_one_full_register() {
         let array = Array::<1>::zeros(16);
@@ -203,6 +280,7 @@ mod tests {
         assert_eq!(data, [0f32; 16]);
     }
 
+    #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
     #[test]
     fn zeros_1d_two_registers() {
         let array = Array::<1>::zeros(17);
@@ -211,10 +289,20 @@ mod tests {
         assert_eq!(array.data.len(), 2);
 
         let data1 = m512_to_array(array.data[0]);
-        let data2 = m512_to_array(array.data[0]);
+        let data2 = m512_to_array(array.data[1]);
 
         assert_eq!(data1, [0f32; 16]);
         assert_eq!(data2[0..1], [0f32; 1]);
+    }
+
+    #[cfg(not(all(target_arch = "x86_64", target_feature = "avx512f")))]
+    #[test]
+    fn zeros() {
+        let array = Array::<1>::zeros(42);
+
+        assert_eq!(array.shape, [42]);
+        assert_eq!(array.data.len(), 42);
+        assert_eq!(array.data, vec![0.0; 42]);
     }
 
     #[test]
