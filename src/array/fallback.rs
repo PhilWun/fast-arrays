@@ -1,4 +1,4 @@
-use std::ops::Add;
+use std::ops::{Add, Sub};
 
 use super::Array;
 
@@ -6,7 +6,7 @@ impl Array<1> {
     pub fn zeros(shape: usize) -> Self {
         Self {
             data: vec![0.0; shape],
-            shape: [shape]
+            shape: [shape],
         }
     }
 
@@ -15,7 +15,7 @@ impl Array<1> {
     }
 
     pub fn set(&mut self, index: usize, value: f32) -> Option<()> {
-        self.data.get_mut(index).map(|x| {*x = value})
+        self.data.get_mut(index).map(|x| *x = value)
     }
 }
 
@@ -31,6 +31,27 @@ impl Add for Array<1> {
 
         for (l, r) in self.data.iter().zip(rhs.data.iter()) {
             new_data.push(*l + *r);
+        }
+
+        Ok(Self {
+            data: new_data,
+            shape: self.shape.clone(),
+        })
+    }
+}
+
+impl Sub for Array<1> {
+    type Output = Result<Self, ()>;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        if self.shape[0] != rhs.shape[0] {
+            return Err(());
+        }
+
+        let mut new_data = Vec::with_capacity(self.data.len());
+
+        for (l, r) in self.data.iter().zip(rhs.data.iter()) {
+            new_data.push(*l - *r);
         }
 
         Ok(Self {

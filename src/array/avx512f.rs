@@ -1,51 +1,10 @@
 use std::{
-    arch::x86_64::{__m512, _mm512_fmadd_ps, _mm512_add_ps},
-    simd::{f32x16, Simd},
-    time::Instant,
+    arch::x86_64::{__m512, _mm512_add_ps, _mm512_sub_ps},
+    ops::{Add, Sub},
+    simd::f32x16
 };
 
-use std::ops::Add;
-
-pub fn example() {
-    let c = [3f32; 16];
-
-    let mut a = __m512::from(Simd::from(c));
-    let mut b = a.clone();
-    let mut c = a.clone();
-    let mut d = a.clone();
-
-    let time1 = Instant::now();
-
-    unsafe {
-        for _ in 0..1_000_000 {
-            a = _mm512_fmadd_ps(a, a, a);
-            b = _mm512_fmadd_ps(b, b, b);
-            c = _mm512_fmadd_ps(c, c, c);
-            d = _mm512_fmadd_ps(d, d, d);
-        }
-    }
-
-    let time2 = Instant::now();
-
-    for result in Simd::from(a).as_array() {
-        print!("{}, ", result);
-    }
-
-    for result in Simd::from(b).as_array() {
-        print!("{}, ", result);
-    }
-
-    for result in Simd::from(c).as_array() {
-        print!("{}, ", result);
-    }
-
-    for result in Simd::from(d).as_array() {
-        print!("{}, ", result);
-    }
-
-    println!();
-    println!("{}s", (time2 - time1).as_secs_f32());
-}
+use super::Array;
 
 fn m512_to_array(value: __m512) -> [f32; 16] {
     let value: f32x16 = value.into();
@@ -112,6 +71,29 @@ impl Add for Array<1> {
         unsafe {
             for (l, r) in self.data.iter().zip(rhs.data.iter()) {
                 new_data.push(_mm512_add_ps(*l, *r));
+            }
+        }
+
+        Ok(Self {
+            data: new_data,
+            shape: self.shape.clone(),
+        })
+    }
+}
+
+impl Sub for Array<1> {
+    type Output = Result<Self, ()>;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        if self.shape[0] != rhs.shape[0] {
+            return Err(());
+        }
+
+        let mut new_data = Vec::with_capacity(self.data.len());
+
+        unsafe {
+            for (l, r) in self.data.iter().zip(rhs.data.iter()) {
+                new_data.push(_mm512_sub_ps(*l, *r));
             }
         }
 
