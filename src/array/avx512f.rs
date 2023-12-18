@@ -1,6 +1,6 @@
 use std::{
-    arch::x86_64::{__m512, _mm512_add_ps, _mm512_sub_ps},
-    ops::{Add, Sub},
+    arch::x86_64::{__m512, _mm512_add_ps, _mm512_sub_ps, _mm512_mul_ps, _mm512_div_ps},
+    ops::{Add, Sub, Mul, Div},
     simd::f32x16
 };
 
@@ -94,6 +94,52 @@ impl Sub for Array<1> {
         unsafe {
             for (l, r) in self.data.iter().zip(rhs.data.iter()) {
                 new_data.push(_mm512_sub_ps(*l, *r));
+            }
+        }
+
+        Ok(Self {
+            data: new_data,
+            shape: self.shape.clone(),
+        })
+    }
+}
+
+impl Mul for Array<1> {
+    type Output = Result<Self, ()>;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        if self.shape[0] != rhs.shape[0] {
+            return Err(());
+        }
+
+        let mut new_data = Vec::with_capacity(self.data.len());
+
+        unsafe {
+            for (l, r) in self.data.iter().zip(rhs.data.iter()) {
+                new_data.push(_mm512_mul_ps(*l, *r));
+            }
+        }
+
+        Ok(Self {
+            data: new_data,
+            shape: self.shape.clone(),
+        })
+    }
+}
+
+impl Div for Array<1> {
+    type Output = Result<Self, ()>;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        if self.shape[0] != rhs.shape[0] {
+            return Err(());
+        }
+
+        let mut new_data = Vec::with_capacity(self.data.len());
+
+        unsafe {
+            for (l, r) in self.data.iter().zip(rhs.data.iter()) {
+                new_data.push(_mm512_div_ps(*l, *r));
             }
         }
 
