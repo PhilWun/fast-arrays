@@ -111,6 +111,15 @@ mod tests {
     }
 
     #[test]
+    fn add_shape_mismatch() {
+        let array1: Array<1> = vec![1.0, 2.0, 3.0].into();
+        let array2: Array<1> = vec![2.0, 3.0, 4.0, 5.0].into();
+        let sum = array1 + array2;
+
+        assert!(sum.is_err());
+    }
+
+    #[test]
     fn sub_small() {
         let array1: Array<1> = vec![1.0, 2.0, 3.0].into();
         let array2: Array<1> = vec![2.0, 3.0, 4.0].into();
@@ -135,5 +144,14 @@ mod tests {
         let result: Vec<f32> = (array1 - array2).unwrap().into();
 
         assert_eq!(result, vec![-1.0; 17]);
+    }
+
+    #[test]
+    fn sub_shape_mismatch() {
+        let array1: Array<1> = vec![1.0, 2.0, 3.0].into();
+        let array2: Array<1> = vec![2.0, 3.0, 4.0, 5.0].into();
+        let result = array1 - array2;
+
+        assert!(result.is_err());
     }
 }
