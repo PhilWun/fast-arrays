@@ -1,6 +1,7 @@
 #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
 use std::arch::x86_64::__m512;
 
+#[derive(Clone)]
 pub struct Array<const D: usize> {
     #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
     pub(super) data: Vec<__m512>,
@@ -469,5 +470,59 @@ mod tests {
         let result = array1.min(&array2);
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn sqrt_small() {
+        let mut data: Vec<f32> = Vec::with_capacity(3);
+        let mut target: Vec<f32> = Vec::with_capacity(3);
+
+        for i in 0..3 {
+            data.push(i as f32);
+            target.push((i as f32).sqrt());
+        }
+
+        let data: Array<1> = data.into();
+        let result: Vec<f32> = data.sqrt().into();
+
+        for (r, t) in result.iter().zip(target.iter()) {
+            assert!((r - t).abs() < f32::EPSILON);
+        }
+    }
+
+    #[test]
+    fn sqrt_one_full_register() {
+        let mut data: Vec<f32> = Vec::with_capacity(16);
+        let mut target: Vec<f32> = Vec::with_capacity(16);
+
+        for i in 0..16 {
+            data.push(i as f32);
+            target.push((i as f32).sqrt());
+        }
+
+        let data: Array<1> = data.into();
+        let result: Vec<f32> = data.sqrt().into();
+
+        for (r, t) in result.iter().zip(target.iter()) {
+            assert!((r - t).abs() < f32::EPSILON);
+        }
+    }
+
+    #[test]
+    fn sqrt_two_registers() {
+        let mut data: Vec<f32> = Vec::with_capacity(17);
+        let mut target: Vec<f32> = Vec::with_capacity(17);
+
+        for i in 0..17 {
+            data.push(i as f32);
+            target.push((i as f32).sqrt());
+        }
+
+        let data: Array<1> = data.into();
+        let result: Vec<f32> = data.sqrt().into();
+
+        for (r, t) in result.iter().zip(target.iter()) {
+            assert!((r - t).abs() < f32::EPSILON);
+        }
     }
 }
