@@ -146,6 +146,76 @@ mod tests {
     }
 
     #[test]
+    fn add_assign_small() {
+        let mut array1: Array<1> = vec![1.0, 2.0, 3.0].into();
+        let array2: Array<1> = vec![2.0, 3.0, 4.0].into();
+
+        array1 += array2;
+        let sum: Vec<f32> = array1.into();
+
+        assert_eq!(sum, vec![3.0, 5.0, 7.0]);
+    }
+
+    #[test]
+    fn add_assign_one_full_register() {
+        let mut array1: Array<1> = vec![
+            1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
+        ]
+        .into();
+        let array2: Array<1> = vec![
+            2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0,
+        ]
+        .into();
+
+        array1 += array2;
+
+        let sum: Vec<f32> = array1.into();
+
+        assert_eq!(
+            sum,
+            vec![
+                3.0, 5.0, 7.0, 9.0, 11.0, 13.0, 15.0, 17.0, 19.0, 21.0, 23.0, 25.0, 27.0, 29.0,
+                31.0, 33.0
+            ]
+        );
+    }
+
+    #[test]
+    fn add_assign_two_registers() {
+        let mut array1: Array<1> = vec![
+            1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
+            17.0,
+        ]
+        .into();
+        let array2: Array<1> = vec![
+            2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0,
+            18.0,
+        ]
+        .into();
+        
+        array1 += array2;
+
+        let sum: Vec<f32> = array1.into();
+
+        assert_eq!(
+            sum,
+            vec![
+                3.0, 5.0, 7.0, 9.0, 11.0, 13.0, 15.0, 17.0, 19.0, 21.0, 23.0, 25.0, 27.0, 29.0,
+                31.0, 33.0, 35.0
+            ]
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn add_assign_shape_mismatch() {
+        let mut array1: Array<1> = vec![1.0, 2.0, 3.0].into();
+        let array2: Array<1> = vec![2.0, 3.0, 4.0, 5.0].into();
+        
+        array1 += array2;
+    }
+
+    #[test]
     fn sub_small() {
         let array1: Array<1> = vec![1.0, 2.0, 3.0].into();
         let array2: Array<1> = vec![2.0, 3.0, 4.0].into();
@@ -193,6 +263,65 @@ mod tests {
         let result = array1 - array2;
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn sub_assign_small() {
+        let mut array1: Array<1> = vec![1.0, 2.0, 3.0].into();
+        let array2: Array<1> = vec![2.0, 3.0, 4.0].into();
+
+        array1 -= array2;
+
+        let result: Vec<f32> = array1.into();
+
+        assert_eq!(result, vec![-1.0; 3]);
+    }
+
+    #[test]
+    fn sub_assign_one_full_register() {
+        let mut array1: Array<1> = vec![
+            1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
+        ]
+        .into();
+        let array2: Array<1> = vec![
+            2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0,
+        ]
+        .into();
+        
+        array1 -= array2;
+
+        let result: Vec<f32> = array1.into();
+
+        assert_eq!(result, vec![-1.0; 16]);
+    }
+
+    #[test]
+    fn sub_assign_two_registers() {
+        let mut array1: Array<1> = vec![
+            1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
+            17.0,
+        ]
+        .into();
+        let array2: Array<1> = vec![
+            2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0,
+            18.0,
+        ]
+        .into();
+        
+        array1 -= array2;
+
+        let result: Vec<f32> = array1.into();
+
+        assert_eq!(result, vec![-1.0; 17]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn sub_assign_shape_mismatch() {
+        let mut array1: Array<1> = vec![1.0, 2.0, 3.0].into();
+        let array2: Array<1> = vec![2.0, 3.0, 4.0, 5.0].into();
+
+        array1 -= array2;
     }
 
     #[test]
@@ -255,6 +384,74 @@ mod tests {
         let result = array1 * array2;
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn mul_assign_small() {
+        let mut array1: Array<1> = vec![1.0, 2.0, 3.0].into();
+        let array2: Array<1> = vec![2.0, 3.0, 4.0].into();
+
+        array1 *= array2;
+        let result: Vec<f32> = array1.into();
+
+        assert_eq!(result, vec![2.0, 6.0, 12.0]);
+    }
+
+    #[test]
+    fn mul_assign_one_full_register() {
+        let mut array1: Array<1> = vec![
+            1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
+        ]
+        .into();
+        let array2: Array<1> = vec![
+            2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0,
+        ]
+        .into();
+        
+        array1 *= array2;
+        let result: Vec<f32> = array1.into();
+
+        assert_eq!(
+            result,
+            vec![
+                2.0, 6.0, 12.0, 20.0, 30.0, 42.0, 56.0, 72.0, 90.0, 110.0, 132.0, 156.0, 182.0,
+                210.0, 240.0, 272.0
+            ]
+        );
+    }
+
+    #[test]
+    fn mul_assign_two_registers() {
+        let mut array1: Array<1> = vec![
+            1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
+            17.0,
+        ]
+        .into();
+        let array2: Array<1> = vec![
+            2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0,
+            18.0,
+        ]
+        .into();
+        
+        array1 *= array2;
+        let result: Vec<f32> = array1.into();
+
+        assert_eq!(
+            result,
+            vec![
+                2.0, 6.0, 12.0, 20.0, 30.0, 42.0, 56.0, 72.0, 90.0, 110.0, 132.0, 156.0, 182.0,
+                210.0, 240.0, 272.0, 306.0
+            ]
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn mul_assign_shape_mismatch() {
+        let mut array1: Array<1> = vec![1.0, 2.0, 3.0].into();
+        let array2: Array<1> = vec![2.0, 3.0, 4.0, 5.0].into();
+
+        array1 *= array2;
     }
 
     #[test]
@@ -346,6 +543,103 @@ mod tests {
         let result = array1 / array2;
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn div_assign_small() {
+        let mut array1: Array<1> = vec![1.0, 2.0, 3.0].into();
+        let array2: Array<1> = vec![2.0, 3.0, 4.0].into();
+
+        array1 /= array2;
+        let result: Vec<f32> = array1.into();
+
+        assert_eq!(result, vec![1.0 / 2.0, 2.0 / 3.0, 3.0 / 4.0]);
+    }
+
+    #[test]
+    fn div_assign_one_full_register() {
+        let mut array1: Array<1> = vec![
+            1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
+        ]
+        .into();
+        let array2: Array<1> = vec![
+            2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0,
+        ]
+        .into();
+        
+        array1 /= array2;
+        let result: Vec<f32> = array1.into();
+
+        assert_eq!(
+            result,
+            vec![
+                1.0 / 2.0,
+                2.0 / 3.0,
+                3.0 / 4.0,
+                4.0 / 5.0,
+                5.0 / 6.0,
+                6.0 / 7.0,
+                7.0 / 8.0,
+                8.0 / 9.0,
+                9.0 / 10.0,
+                10.0 / 11.0,
+                11.0 / 12.0,
+                12.0 / 13.0,
+                13.0 / 14.0,
+                14.0 / 15.0,
+                15.0 / 16.0,
+                16.0 / 17.0
+            ]
+        );
+    }
+
+    #[test]
+    fn div_assign_two_registers() {
+        let mut array1: Array<1> = vec![
+            1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0,
+            17.0,
+        ]
+        .into();
+        let array2: Array<1> = vec![
+            2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0,
+            18.0,
+        ]
+        .into();
+        
+        array1 /= array2;
+        let result: Vec<f32> = array1.into();
+
+        assert_eq!(
+            result,
+            vec![
+                1.0 / 2.0,
+                2.0 / 3.0,
+                3.0 / 4.0,
+                4.0 / 5.0,
+                5.0 / 6.0,
+                6.0 / 7.0,
+                7.0 / 8.0,
+                8.0 / 9.0,
+                9.0 / 10.0,
+                10.0 / 11.0,
+                11.0 / 12.0,
+                12.0 / 13.0,
+                13.0 / 14.0,
+                14.0 / 15.0,
+                15.0 / 16.0,
+                16.0 / 17.0,
+                17.0 / 18.0
+            ]
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn div_assign_shape_mismatch() {
+        let mut array1: Array<1> = vec![1.0, 2.0, 3.0].into();
+        let array2: Array<1> = vec![2.0, 3.0, 4.0, 5.0].into();
+
+        array1 /= array2;
     }
 
     #[test]

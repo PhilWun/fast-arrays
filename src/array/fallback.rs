@@ -1,4 +1,4 @@
-use std::ops::{Add, Sub, Mul, Div};
+use std::ops::{Add, Sub, Mul, Div, AddAssign, SubAssign, MulAssign, DivAssign};
 
 use super::Array;
 
@@ -124,6 +124,19 @@ impl Add for Array<1> {
     }
 }
 
+// TODO: checked and unchecked operators
+impl AddAssign for Array<1> {
+    fn add_assign(&mut self, rhs: Self) {
+        if self.shape[0] != rhs.shape[0] {
+            panic!();
+        }
+
+        for (l, r) in self.data.iter_mut().zip(rhs.data.iter()) {
+            *l += r;
+        }
+    }
+}
+
 impl Sub for Array<1> {
     type Output = Result<Self, ()>;
 
@@ -142,6 +155,18 @@ impl Sub for Array<1> {
             data: new_data,
             shape: self.shape.clone(),
         })
+    }
+}
+
+impl SubAssign for Array<1> {
+    fn sub_assign(&mut self, rhs: Self) {
+        if self.shape[0] != rhs.shape[0] {
+            panic!();
+        }
+
+        for (l, r) in self.data.iter_mut().zip(rhs.data.iter()) {
+            *l -= r;
+        }
     }
 }
 
@@ -166,6 +191,18 @@ impl Mul for Array<1> {
     }
 }
 
+impl MulAssign for Array<1> {
+    fn mul_assign(&mut self, rhs: Self) {
+        if self.shape[0] != rhs.shape[0] {
+            panic!();
+        }
+
+        for (l, r) in self.data.iter_mut().zip(rhs.data.iter()) {
+            *l *= r;
+        }
+    }
+}
+
 impl Div for Array<1> {
     type Output = Result<Self, ()>;
 
@@ -184,6 +221,18 @@ impl Div for Array<1> {
             data: new_data,
             shape: self.shape.clone(),
         })
+    }
+}
+
+impl DivAssign for Array<1> {
+    fn div_assign(&mut self, rhs: Self) {
+        if self.shape[0] != rhs.shape[0] {
+            panic!();
+        }
+
+        for (l, r) in self.data.iter_mut().zip(rhs.data.iter()) {
+            *l /= r;
+        }
     }
 }
 
