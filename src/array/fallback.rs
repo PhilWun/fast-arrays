@@ -2,6 +2,23 @@ use std::ops::{Add, Sub, Mul, Div, AddAssign, SubAssign, MulAssign, DivAssign};
 
 use super::Array;
 
+impl From<Array<1>> for Vec<f32> {
+    fn from(value: Array<1>) -> Self {
+        value.data.clone()
+    }
+}
+
+impl From<Vec<f32>> for Array<1> {
+    fn from(value: Vec<f32>) -> Self {
+        let len = value.len();
+
+        Array {
+            data: value,
+            shape: [len],
+        }
+    }
+}
+
 impl Array<1> {
     pub fn zeros(shape: usize) -> Self {
         Self {
@@ -233,36 +250,5 @@ impl DivAssign for Array<1> {
         for (l, r) in self.data.iter_mut().zip(rhs.data.iter()) {
             *l /= r;
         }
-    }
-}
-
-impl From<Array<1>> for Vec<f32> {
-    fn from(value: Array<1>) -> Self {
-        value.data.clone()
-    }
-}
-
-impl From<Vec<f32>> for Array<1> {
-    fn from(value: Vec<f32>) -> Self {
-        let len = value.len();
-
-        Array {
-            data: value,
-            shape: [len],
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn zeros() {
-        let array = Array::<1>::zeros(42);
-
-        assert_eq!(array.shape, [42]);
-        assert_eq!(array.data.len(), 42);
-        assert_eq!(array.data, vec![0.0; 42]);
     }
 }

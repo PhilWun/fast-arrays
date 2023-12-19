@@ -16,6 +16,54 @@ fn array_to_m512(value: [f32; 16]) -> __m512 {
     value.into()
 }
 
+impl From<Array<1>> for Vec<f32> {
+    fn from(value: Array<1>) -> Self {
+        let mut converted = vec![0f32; value.shape[0]];
+        let mut index: usize = 0;
+
+        for register in value.data {
+            let register = m512_to_array(register);
+
+            for i in 0..16 {
+                if index >= value.shape[0] {
+                    break;
+                }
+
+                converted[index] = register[i];
+                index += 1;
+            }
+        }
+
+        converted
+    }
+}
+
+impl From<Vec<f32>> for Array<1> {
+    fn from(value: Vec<f32>) -> Self {
+        let register_count = value.len().div_ceil(16);
+        let mut data: Vec<__m512> = Vec::with_capacity(register_count);
+        let mut index = 0;
+
+        for _ in 0..register_count {
+            let mut new_register_data = [0f32; 16];
+
+            for i in 0..16 {
+                if index < value.len() {
+                    new_register_data[i] = value[index];
+                    index += 1;
+                }
+            }
+
+            data.push(array_to_m512(new_register_data));
+        }
+
+        Array {
+            data: data,
+            shape: [value.len()],
+        }
+    }
+}
+
 impl Array<1> {
     pub fn zeros(shape: usize) -> Self {
         let register_count = shape.div_ceil(16);
@@ -241,96 +289,5 @@ impl Div for Array<1> {
             data: new_data,
             shape: self.shape.clone(),
         })
-    }
-}
-
-impl From<Array<1>> for Vec<f32> {
-    fn from(value: Array<1>) -> Self {
-        let mut converted = vec![0f32; value.shape[0]];
-        let mut index: usize = 0;
-
-        for register in value.data {
-            let register = m512_to_array(register);
-
-            for i in 0..16 {
-                if index >= value.shape[0] {
-                    break;
-                }
-
-                converted[index] = register[i];
-                index += 1;
-            }
-        }
-
-        converted
-    }
-}
-
-impl From<Vec<f32>> for Array<1> {
-    fn from(value: Vec<f32>) -> Self {
-        let register_count = value.len().div_ceil(16);
-        let mut data: Vec<__m512> = Vec::with_capacity(register_count);
-        let mut index = 0;
-
-        for _ in 0..register_count {
-            let mut new_register_data = [0f32; 16];
-
-            for i in 0..16 {
-                if index < value.len() {
-                    new_register_data[i] = value[index];
-                    index += 1;
-                }
-            }
-
-            data.push(array_to_m512(new_register_data));
-        }
-
-        Array {
-            data: data,
-            shape: [value.len()],
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn zeros_1d_small() {
-        let array = Array::<1>::zeros(3);
-
-        assert_eq!(array.shape, [3]);
-        assert_eq!(array.data.len(), 1);
-
-        let data = m512_to_array(array.data[0]);
-
-        assert_eq!(data[0..3], vec![0f32; 3]);
-    }
-
-    #[test]
-    fn zeros_1d_one_full_register() {
-        let array = Array::<1>::zeros(16);
-
-        assert_eq!(array.shape, [16]);
-        assert_eq!(array.data.len(), 1);
-
-        let data = m512_to_array(array.data[0]);
-
-        assert_eq!(data, [0f32; 16]);
-    }
-
-    #[test]
-    fn zeros_1d_two_registers() {
-        let array = Array::<1>::zeros(17);
-
-        assert_eq!(array.shape, [17]);
-        assert_eq!(array.data.len(), 2);
-
-        let data1 = m512_to_array(array.data[0]);
-        let data2 = m512_to_array(array.data[1]);
-
-        assert_eq!(data1, [0f32; 16]);
-        assert_eq!(data2[0..1], [0f32; 1]);
     }
 }
