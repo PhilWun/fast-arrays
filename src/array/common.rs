@@ -525,4 +525,190 @@ mod tests {
             assert!((r - t).abs() < f32::EPSILON);
         }
     }
+
+    #[test]
+    fn fmadd_small() {
+        let mut a: Vec<f32> = Vec::with_capacity(3);
+        let mut b: Vec<f32> = Vec::with_capacity(3);
+        let mut c: Vec<f32> = Vec::with_capacity(3);
+        let mut target: Vec<f32> = Vec::with_capacity(3);
+
+        for i in 0..3 {
+            a.push(i as f32);
+            b.push((i + 1) as f32);
+            c.push((i + 2) as f32);
+            target.push(i as f32 * (i + 1) as f32 + (i + 2) as f32);
+        }
+
+        let a: Array<1> = a.into();
+        let b: Array<1> = b.into();
+        let c: Array<1> = c.into();        
+        let result: Vec<f32> = c.fmadd(&a, &b).unwrap().into();
+
+        assert_eq!(result, target);
+    }
+
+    #[test]
+    fn fmadd_one_full_register() {
+        let mut a: Vec<f32> = Vec::with_capacity(16);
+        let mut b: Vec<f32> = Vec::with_capacity(16);
+        let mut c: Vec<f32> = Vec::with_capacity(16);
+        let mut target: Vec<f32> = Vec::with_capacity(16);
+
+        for i in 0..3 {
+            a.push(i as f32);
+            b.push((i + 1) as f32);
+            c.push((i + 2) as f32);
+            target.push(i as f32 * (i + 1) as f32 + (i + 2) as f32);
+        }
+
+        let a: Array<1> = a.into();
+        let b: Array<1> = b.into();
+        let c: Array<1> = c.into();        
+        let result: Vec<f32> = c.fmadd(&a, &b).unwrap().into();
+
+        assert_eq!(result, target);
+    }
+
+    #[test]
+    fn fmadd_two_registers() {
+        let mut a: Vec<f32> = Vec::with_capacity(17);
+        let mut b: Vec<f32> = Vec::with_capacity(17);
+        let mut c: Vec<f32> = Vec::with_capacity(17);
+        let mut target: Vec<f32> = Vec::with_capacity(17);
+
+        for i in 0..3 {
+            a.push(i as f32);
+            b.push((i + 1) as f32);
+            c.push((i + 2) as f32);
+            target.push(i as f32 * (i + 1) as f32 + (i + 2) as f32);
+        }
+
+        let a: Array<1> = a.into();
+        let b: Array<1> = b.into();
+        let c: Array<1> = c.into();        
+        let result: Vec<f32> = c.fmadd(&a, &b).unwrap().into();
+
+        assert_eq!(result, target);
+    }
+
+    #[test]
+    fn fmadd_shape_mismatch() {
+        let mut a: Vec<f32> = Vec::with_capacity(3);
+        let mut b: Vec<f32> = Vec::with_capacity(4);
+        let mut c: Vec<f32> = Vec::with_capacity(5);
+
+        for i in 0..3 {
+            a.push(i as f32);
+            b.push((i + 1) as f32);
+            c.push((i + 2) as f32);
+        }
+
+        b.push(4.0);
+        c.push(5.0);
+        c.push(6.0);
+
+        let a: Array<1> = a.into();
+        let b: Array<1> = b.into();
+        let c: Array<1> = c.into();        
+        let result = c.fmadd(&a, &b);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn fmadd_in_place_small() {
+        let mut a: Vec<f32> = Vec::with_capacity(3);
+        let mut b: Vec<f32> = Vec::with_capacity(3);
+        let mut c: Vec<f32> = Vec::with_capacity(3);
+        let mut target: Vec<f32> = Vec::with_capacity(3);
+
+        for i in 0..3 {
+            a.push(i as f32);
+            b.push((i + 1) as f32);
+            c.push((i + 2) as f32);
+            target.push(i as f32 * (i + 1) as f32 + (i + 2) as f32);
+        }
+
+        let a: Array<1> = a.into();
+        let b: Array<1> = b.into();
+        let mut c: Array<1> = c.into();        
+        c.fmadd_in_place(&a, &b).unwrap();
+
+        let result: Vec<f32> = c.into();
+
+        assert_eq!(result, target);
+    }
+
+    #[test]
+    fn fmadd_in_place_one_full_register() {
+        let mut a: Vec<f32> = Vec::with_capacity(16);
+        let mut b: Vec<f32> = Vec::with_capacity(16);
+        let mut c: Vec<f32> = Vec::with_capacity(16);
+        let mut target: Vec<f32> = Vec::with_capacity(16);
+
+        for i in 0..3 {
+            a.push(i as f32);
+            b.push((i + 1) as f32);
+            c.push((i + 2) as f32);
+            target.push(i as f32 * (i + 1) as f32 + (i + 2) as f32);
+        }
+
+        let a: Array<1> = a.into();
+        let b: Array<1> = b.into();
+        let mut c: Array<1> = c.into();        
+        c.fmadd_in_place(&a, &b).unwrap();
+
+        let result: Vec<f32> = c.into();
+
+        assert_eq!(result, target);
+    }
+
+    #[test]
+    fn fmadd_in_place_two_registers() {
+        let mut a: Vec<f32> = Vec::with_capacity(17);
+        let mut b: Vec<f32> = Vec::with_capacity(17);
+        let mut c: Vec<f32> = Vec::with_capacity(17);
+        let mut target: Vec<f32> = Vec::with_capacity(17);
+
+        for i in 0..3 {
+            a.push(i as f32);
+            b.push((i + 1) as f32);
+            c.push((i + 2) as f32);
+            target.push(i as f32 * (i + 1) as f32 + (i + 2) as f32);
+        }
+
+        let a: Array<1> = a.into();
+        let b: Array<1> = b.into();
+        let mut c: Array<1> = c.into();        
+        c.fmadd_in_place(&a, &b).unwrap();
+
+        let result: Vec<f32> = c.into();
+
+        assert_eq!(result, target);
+    }
+
+    #[test]
+    fn fmadd_in_place_shape_mismatch() {
+        let mut a: Vec<f32> = Vec::with_capacity(3);
+        let mut b: Vec<f32> = Vec::with_capacity(4);
+        let mut c: Vec<f32> = Vec::with_capacity(5);
+
+        for i in 0..3 {
+            a.push(i as f32);
+            b.push((i + 1) as f32);
+            c.push((i + 2) as f32);
+        }
+
+        b.push(4.0);
+        c.push(5.0);
+        c.push(6.0);
+
+        let a: Array<1> = a.into();
+        let b: Array<1> = b.into();
+        let mut c: Array<1> = c.into();        
+        let result = c.fmadd_in_place(&a, &b);
+
+        assert!(result.is_err());
+    }
 }

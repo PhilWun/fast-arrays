@@ -1,5 +1,5 @@
 use std::{
-    arch::x86_64::{__m512, _mm512_add_ps, _mm512_sub_ps, _mm512_mul_ps, _mm512_div_ps, _mm512_max_ps, _mm512_min_ps, _mm512_sqrt_ps},
+    arch::x86_64::{__m512, _mm512_add_ps, _mm512_sub_ps, _mm512_mul_ps, _mm512_div_ps, _mm512_max_ps, _mm512_min_ps, _mm512_sqrt_ps, _mm512_fmadd_ps},
     ops::{Add, Sub, Mul, Div},
     simd::f32x16
 };
@@ -108,6 +108,47 @@ impl Array<1> {
             data: new_data,
             shape: self.shape.clone()
         }
+    }
+
+    pub fn fmadd(&self, a: &Self, b: &Self) -> Result<Self, ()> {
+        if self.shape[0] != a.shape[0] {
+            return Err(());
+        }
+
+        if self.shape[0] != b.shape[0] {
+            return Err(());
+        }
+
+        let mut new_data = Vec::with_capacity(self.data.len());
+
+        unsafe {
+            for ((a, b), c) in a.data.iter().zip(b.data.iter()).zip(self.data.iter()) {
+                new_data.push(_mm512_fmadd_ps(*a, *b, *c));
+            }
+        }
+
+        Ok(Self {
+            data: new_data,
+            shape: self.shape.clone()
+        })
+    }
+
+    pub fn fmadd_in_place(&mut self, a: &Self, b: &Self) -> Result<(), ()> {
+        if self.shape[0] != a.shape[0] {
+            return Err(());
+        }
+
+        if self.shape[0] != b.shape[0] {
+            return Err(());
+        }
+
+        unsafe {
+            for ((a, b), c) in a.data.iter().zip(b.data.iter()).zip(self.data.iter_mut()) {
+                *c = _mm512_fmadd_ps(*a, *b, *c);
+            }
+        }
+
+        Ok(())
     }
 }
 
