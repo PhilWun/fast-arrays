@@ -1,6 +1,6 @@
 use std::{
     arch::x86_64::{__m512, _mm512_add_ps, _mm512_sub_ps, _mm512_mul_ps, _mm512_div_ps, _mm512_max_ps, _mm512_min_ps, _mm512_sqrt_ps, _mm512_fmadd_ps},
-    ops::{Add, Sub, Mul, Div},
+    ops::{Add, Sub, Mul, Div, AddAssign, SubAssign, MulAssign, DivAssign},
     simd::f32x16
 };
 
@@ -223,6 +223,20 @@ impl Add for Array<1> {
     }
 }
 
+impl AddAssign for Array<1> {
+    fn add_assign(&mut self, rhs: Self) {
+        if self.shape[0] != rhs.shape[0] {
+            panic!();
+        }
+
+        unsafe {
+            for (l, r) in self.data.iter_mut().zip(rhs.data.iter()) {
+                *l = _mm512_add_ps(*l, *r);
+            }
+        }
+    }
+}
+
 impl Sub for Array<1> {
     type Output = Result<Self, ()>;
 
@@ -243,6 +257,20 @@ impl Sub for Array<1> {
             data: new_data,
             shape: self.shape.clone(),
         })
+    }
+}
+
+impl SubAssign for Array<1> {
+    fn sub_assign(&mut self, rhs: Self) {
+        if self.shape[0] != rhs.shape[0] {
+            panic!();
+        }
+
+        unsafe {
+            for (l, r) in self.data.iter_mut().zip(rhs.data.iter()) {
+                *l = _mm512_sub_ps(*l, *r);
+            }
+        }
     }
 }
 
@@ -269,6 +297,20 @@ impl Mul for Array<1> {
     }
 }
 
+impl MulAssign for Array<1> {
+    fn mul_assign(&mut self, rhs: Self) {
+        if self.shape[0] != rhs.shape[0] {
+            panic!();
+        }
+
+        unsafe {
+            for (l, r) in self.data.iter_mut().zip(rhs.data.iter()) {
+                *l = _mm512_mul_ps(*l, *r);
+            }
+        }
+    }
+}
+
 impl Div for Array<1> {
     type Output = Result<Self, ()>;
 
@@ -289,5 +331,19 @@ impl Div for Array<1> {
             data: new_data,
             shape: self.shape.clone(),
         })
+    }
+}
+
+impl DivAssign for Array<1> {
+    fn div_assign(&mut self, rhs: Self) {
+        if self.shape[0] != rhs.shape[0] {
+            panic!();
+        }
+
+        unsafe {
+            for (l, r) in self.data.iter_mut().zip(rhs.data.iter()) {
+                *l = _mm512_div_ps(*l, *r);
+            }
+        }
     }
 }
