@@ -22,3 +22,5 @@ path = "src/bin/example_code.rs"
 
 [dev-dependencies]
 rstest = "0.18.2"
+rand = "0.8.5"
+rand_chacha = "0.3.1"
