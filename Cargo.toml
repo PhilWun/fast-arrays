@@ -19,3 +19,6 @@ path = "src/bin/example_code.rs"
 # debug = 0
 
 [dependencies]
+
+[dev-dependencies]
+rstest = "0.18.2"

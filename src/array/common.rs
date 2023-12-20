@@ -12,6 +12,10 @@ pub struct Array<const D: usize> {
 
 #[cfg(test)]
 mod tests {
+    use std::ops::{Add, Sub, Mul, Div, AddAssign, SubAssign, MulAssign, DivAssign};
+
+    use rstest::rstest;
+
     use super::*;
 
     #[test]
@@ -98,8 +102,12 @@ mod tests {
         array.set(64, 42.0);
     }
 
-    #[test]
-    fn add() {
+    #[rstest]
+    #[case::add(Add::add, Add::add)]
+    #[case::sub(Sub::sub, Sub::sub)]
+    #[case::mul(Mul::mul, Mul::mul)]
+    #[case::div(Div::div, Div::div)]
+    fn two_input_one_output(#[case] test_operator: fn(Array<1>, Array<1>) -> Array<1>, #[case] target_operator: fn(f32, f32) -> f32) {
         let mut data1 = Vec::new();
         let mut data2 = Vec::new();
 
@@ -107,10 +115,10 @@ mod tests {
             let array1: Array<1> = data1.clone().into();
             let array2: Array<1> = data2.clone().into();
 
-            let result: Vec<f32> = (array1 + array2).into();
+            let result: Vec<f32> = test_operator(array1, array2).into();
 
             for ((d1, d2), r) in data1.iter().zip(data2.iter()).zip(result.iter()) {
-                assert_eq!(*r, d1 + d2);
+                assert_eq!(*r, target_operator(*d1, *d2));
             }
 
             data1.push(i as f32);
@@ -118,16 +126,24 @@ mod tests {
         }
     }
 
-    #[test]
+    #[rstest]
+    #[case::add(Add::add)]
+    #[case::sub(Sub::sub)]
+    #[case::mul(Mul::mul)]
+    #[case::div(Div::div)]
     #[should_panic]
-    fn add_shape_mismatch() {
+    fn two_input_one_output_shape_mismatch(#[case] test_operator: fn(Array<1>, Array<1>) -> Array<1>) {
         let array1: Array<1> = vec![0.0; 3].into();
         let array2: Array<1> = vec![0.0; 4].into();
-        let _ = array1 + array2;
+        let _ = test_operator(array1, array2);
     }
 
-    #[test]
-    fn add_assign() {
+    #[rstest]
+    #[case::add(AddAssign::add_assign, Add::add)]
+    #[case::sub(SubAssign::sub_assign, Sub::sub)]
+    #[case::mul(MulAssign::mul_assign, Mul::mul)]
+    #[case::div(DivAssign::div_assign, Div::div)]
+    fn two_input_zero_output(#[case] test_operator: fn(&mut Array<1>, Array<1>), #[case] target_operator: fn(f32, f32) -> f32) {
         let mut data1 = Vec::new();
         let mut data2 = Vec::new();
 
@@ -135,11 +151,11 @@ mod tests {
             let mut array1: Array<1> = data1.clone().into();
             let array2: Array<1> = data2.clone().into();
 
-            array1 += array2;
+            test_operator(&mut array1, array2);
             let result: Vec<f32> = array1.into();
 
             for ((d1, d2), r) in data1.iter().zip(data2.iter()).zip(result.iter()) {
-                assert_eq!(*r, d1 + d2);
+                assert_eq!(*r, target_operator(*d1, *d2));
             }
 
             data1.push(i as f32);
@@ -147,187 +163,16 @@ mod tests {
         }
     }
 
-    #[test]
+    #[rstest]
+    #[case::sub(AddAssign::add_assign)]
+    #[case::add(SubAssign::sub_assign)]
+    #[case::mul(MulAssign::mul_assign)]
+    #[case::div(DivAssign::div_assign)]
     #[should_panic]
-    fn add_assign_shape_mismatch() {
+    fn two_input_zero_output_shape_mismatch(#[case] test_operator: fn(&mut Array<1>, Array<1>)) {
         let mut array1: Array<1> = vec![0.0; 3].into();
         let array2: Array<1> = vec![0.0; 4].into();
-        
-        array1 += array2;
-    }
-
-    #[test]
-    fn sub() {
-        let mut data1 = Vec::new();
-        let mut data2 = Vec::new();
-
-        for i in 0..64 {
-            let array1: Array<1> = data1.clone().into();
-            let array2: Array<1> = data2.clone().into();
-
-            let result: Vec<f32> = (array1 - array2).into();
-
-            for ((d1, d2), r) in data1.iter().zip(data2.iter()).zip(result.iter()) {
-                assert_eq!(*r, d1 - d2);
-            }
-
-            data1.push(i as f32);
-            data2.push((i + 1) as f32);
-        }
-    }
-
-    #[test]
-    #[should_panic]
-    fn sub_shape_mismatch() {
-        let array1: Array<1> = vec![0.0; 3].into();
-        let array2: Array<1> = vec![0.0; 4].into();
-        let _ = array1 - array2;
-    }
-
-    #[test]
-    fn sub_assign() {
-        let mut data1 = Vec::new();
-        let mut data2 = Vec::new();
-
-        for i in 0..64 {
-            let mut array1: Array<1> = data1.clone().into();
-            let array2: Array<1> = data2.clone().into();
-
-            array1 -= array2;
-            let result: Vec<f32> = array1.into();
-
-            for ((d1, d2), r) in data1.iter().zip(data2.iter()).zip(result.iter()) {
-                assert_eq!(*r, d1 - d2);
-            }
-
-            data1.push(i as f32);
-            data2.push((i + 1) as f32);
-        }
-    }
-
-    #[test]
-    #[should_panic]
-    fn sub_assign_shape_mismatch() {
-        let mut array1: Array<1> = vec![0.0; 3].into();
-        let array2: Array<1> = vec![0.0; 4].into();
-
-        array1 -= array2;
-    }
-
-    #[test]
-    fn mul() {
-        let mut data1 = Vec::new();
-        let mut data2 = Vec::new();
-
-        for i in 0..64 {
-            let array1: Array<1> = data1.clone().into();
-            let array2: Array<1> = data2.clone().into();
-
-            let result: Vec<f32> = (array1 * array2).into();
-
-            for ((d1, d2), r) in data1.iter().zip(data2.iter()).zip(result.iter()) {
-                assert_eq!(*r, d1 * d2);
-            }
-
-            data1.push(i as f32);
-            data2.push((i + 1) as f32);
-        }
-    }
-
-    #[test]
-    #[should_panic]
-    fn mul_shape_mismatch() {
-        let array1: Array<1> = vec![0.0; 3].into();
-        let array2: Array<1> = vec![0.0; 4].into();
-        let _ = array1 * array2;
-    }
-
-    #[test]
-    fn mul_assign() {
-        let mut data1 = Vec::new();
-        let mut data2 = Vec::new();
-
-        for i in 0..64 {
-            let mut array1: Array<1> = data1.clone().into();
-            let array2: Array<1> = data2.clone().into();
-
-            array1 *= array2;
-            let result: Vec<f32> = array1.into();
-
-            for ((d1, d2), r) in data1.iter().zip(data2.iter()).zip(result.iter()) {
-                assert_eq!(*r, d1 * d2);
-            }
-
-            data1.push(i as f32);
-            data2.push((i + 1) as f32);
-        }
-    }
-
-    #[test]
-    #[should_panic]
-    fn mul_assign_shape_mismatch() {
-        let mut array1: Array<1> = vec![0.0; 3].into();
-        let array2: Array<1> = vec![0.0; 4].into();
-
-        array1 *= array2;
-    }
-
-    #[test]
-    fn div() {
-        let mut data1 = Vec::new();
-        let mut data2 = Vec::new();
-
-        for i in 0..64 {
-            let array1: Array<1> = data1.clone().into();
-            let array2: Array<1> = data2.clone().into();
-
-            let result: Vec<f32> = (array1 / array2).into();
-
-            for ((d1, d2), r) in data1.iter().zip(data2.iter()).zip(result.iter()) {
-                assert_eq!(*r, d1 / d2);
-            }
-
-            data1.push(i as f32);
-            data2.push((i + 1) as f32);
-        }
-    }
-
-    #[test]
-    #[should_panic]
-    fn div_shape_mismatch() {
-        let array1: Array<1> = vec![0.0; 3].into();
-        let array2: Array<1> = vec![0.0; 4].into();
-        let _ = array1 / array2;
-    }
-
-    #[test]
-    fn div_assign() {
-        let mut data1 = Vec::new();
-        let mut data2 = Vec::new();
-
-        for i in 0..64 {
-            let mut array1: Array<1> = data1.clone().into();
-            let array2: Array<1> = data2.clone().into();
-
-            array1 /= array2;
-            let result: Vec<f32> = array1.into();
-
-            for ((d1, d2), r) in data1.iter().zip(data2.iter()).zip(result.iter()) {
-                assert_eq!(*r, d1 / d2);
-            }
-
-            data1.push(i as f32);
-            data2.push((i + 1) as f32);
-        }
-    }
-
-    #[test]
-    #[should_panic]
-    fn div_assign_shape_mismatch() {
-        let mut array1: Array<1> = vec![0.0; 3].into();
-        let array2: Array<1> = vec![0.0; 4].into();
-
-        array1 /= array2;
+        let _ = test_operator(&mut array1, array2);
     }
 
     #[test]
