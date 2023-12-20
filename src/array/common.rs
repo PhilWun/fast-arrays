@@ -10,6 +10,13 @@ pub struct Array<const D: usize> {
     pub(super) shape: [usize; D],
 }
 
+type Type1Function = fn(Array<1>, Array<1>) -> Array<1>;
+type Type2Function = fn(&mut Array<1>, Array<1>);
+type Type3Function = fn(&Array<1>, &Array<1>) -> Array<1>;
+type Type4Function = fn(&Array<1>) -> Array<1>;
+type Type5Function = fn(&Array<1>, &Array<1>, &Array<1>) -> Array<1>;
+type Type6Function = fn(&mut Array<1>, &Array<1>, &Array<1>);
+
 #[cfg(test)]
 mod tests {
     use std::ops::{Add, Sub, Mul, Div, AddAssign, SubAssign, MulAssign, DivAssign};
@@ -107,7 +114,7 @@ mod tests {
     #[case::sub(Sub::sub, Sub::sub)]
     #[case::mul(Mul::mul, Mul::mul)]
     #[case::div(Div::div, Div::div)]
-    fn two_input_one_output(#[case] test_operator: fn(Array<1>, Array<1>) -> Array<1>, #[case] target_operator: fn(f32, f32) -> f32) {
+    fn type1(#[case] test_function: Type1Function, #[case] target_function: fn(f32, f32) -> f32) {
         let mut data1 = Vec::new();
         let mut data2 = Vec::new();
 
@@ -115,10 +122,10 @@ mod tests {
             let array1: Array<1> = data1.clone().into();
             let array2: Array<1> = data2.clone().into();
 
-            let result: Vec<f32> = test_operator(array1, array2).into();
+            let result: Vec<f32> = test_function(array1, array2).into();
 
             for ((d1, d2), r) in data1.iter().zip(data2.iter()).zip(result.iter()) {
-                assert_eq!(*r, target_operator(*d1, *d2));
+                assert_eq!(*r, target_function(*d1, *d2));
             }
 
             data1.push(i as f32);
@@ -132,10 +139,10 @@ mod tests {
     #[case::mul(Mul::mul)]
     #[case::div(Div::div)]
     #[should_panic]
-    fn two_input_one_output_shape_mismatch(#[case] test_operator: fn(Array<1>, Array<1>) -> Array<1>) {
+    fn type1_shape_mismatch(#[case] test_function: Type1Function) {
         let array1: Array<1> = vec![0.0; 3].into();
         let array2: Array<1> = vec![0.0; 4].into();
-        let _ = test_operator(array1, array2);
+        let _ = test_function(array1, array2);
     }
 
     #[rstest]
@@ -143,7 +150,7 @@ mod tests {
     #[case::sub(SubAssign::sub_assign, Sub::sub)]
     #[case::mul(MulAssign::mul_assign, Mul::mul)]
     #[case::div(DivAssign::div_assign, Div::div)]
-    fn two_input_zero_output(#[case] test_operator: fn(&mut Array<1>, Array<1>), #[case] target_operator: fn(f32, f32) -> f32) {
+    fn type2(#[case] test_function: Type2Function, #[case] target_function: fn(f32, f32) -> f32) {
         let mut data1 = Vec::new();
         let mut data2 = Vec::new();
 
@@ -151,14 +158,14 @@ mod tests {
             let mut array1: Array<1> = data1.clone().into();
             let array2: Array<1> = data2.clone().into();
 
-            test_operator(&mut array1, array2);
+            test_function(&mut array1, array2);
             let result: Vec<f32> = array1.into();
 
             for ((d1, d2), r) in data1.iter().zip(data2.iter()).zip(result.iter()) {
-                assert_eq!(*r, target_operator(*d1, *d2));
+                assert_eq!(*r, target_function(*d1, *d2));
             }
 
-            data1.push(i as f32);
+            data1.push(i as f32); // TODO: use pseudo random numbers with a fixed seed
             data2.push((i + 1) as f32);
         }
     }
@@ -169,14 +176,16 @@ mod tests {
     #[case::mul(MulAssign::mul_assign)]
     #[case::div(DivAssign::div_assign)]
     #[should_panic]
-    fn two_input_zero_output_shape_mismatch(#[case] test_operator: fn(&mut Array<1>, Array<1>)) {
+    fn type2_shape_mismatch(#[case] test_function: Type2Function) {
         let mut array1: Array<1> = vec![0.0; 3].into();
         let array2: Array<1> = vec![0.0; 4].into();
-        let _ = test_operator(&mut array1, array2);
+        let _ = test_function(&mut array1, array2);
     }
 
-    #[test]
-    fn max() {
+    #[rstest]
+    #[case::max(Array::<1>::max, f32::max)]
+    #[case::min(Array::<1>::min, f32::min)]
+    fn type3(#[case] test_function: Type3Function, #[case] target_function: fn(f32, f32) -> f32) {
         let mut data1 = Vec::new();
         let mut data2 = Vec::new();
 
@@ -184,64 +193,35 @@ mod tests {
             let array1: Array<1> = data1.clone().into();
             let array2: Array<1> = data2.clone().into();
 
-            let result: Vec<f32> = array1.max(&array2).into();
+            let result: Vec<f32> = test_function(&array1, &array2).into();
 
             for ((d1, d2), r) in data1.iter().zip(data2.iter()).zip(result.iter()) {
-                assert_eq!(*r, d1.max(*d2));
+                assert_eq!(*r, target_function(*d1, *d2));
             }
 
-            data1.push(i as f32);
+            data1.push(i as f32); // TODO: use pseudo random numbers with a fixed seed
             data2.push((i + 1) as f32);
-
-            (data1, data2) = (data2, data1);
         }
     }
 
-    #[test]
+    #[rstest]
+    #[case::max(Array::<1>::max)]
+    #[case::min(Array::<1>::min)]
     #[should_panic]
-    fn max_shape_mismatch() {
+    fn type3_shape_mismatch(#[case] test_function: Type3Function) {
         let array1: Array<1> = vec![0.0; 3].into();
         let array2: Array<1> = vec![0.0; 4].into();
-        array1.max(&array2);
+        let _ = test_function(&array1, &array2);
     }
 
-    #[test]
-    fn min() {
-        let mut data1 = Vec::new();
-        let mut data2 = Vec::new();
-
-        for i in 0..64 {
-            let array1: Array<1> = data1.clone().into();
-            let array2: Array<1> = data2.clone().into();
-
-            let result: Vec<f32> = array1.min(&array2).into();
-
-            for ((d1, d2), r) in data1.iter().zip(data2.iter()).zip(result.iter()) {
-                assert_eq!(*r, d1.min(*d2));
-            }
-
-            data1.push(i as f32);
-            data2.push((i + 1) as f32);
-
-            (data1, data2) = (data2, data1);
-        }
-    }
-
-    #[test]
-    #[should_panic]
-    fn min_shape_mismatch() {
-        let array1: Array<1> = vec![0.0; 3].into();
-        let array2: Array<1> = vec![0.0; 4].into();
-        array1.min(&array2);
-    }
-
-    #[test]
-    fn sqrt() {
+    #[rstest]
+    #[case::sqrt(Array::<1>::sqrt)]
+    fn type4(#[case] test_function: Type4Function) {
         let mut data = Vec::new();
 
         for i in 0..64 {
             let array: Array<1> = data.clone().into();
-            let result: Vec<f32> = array.sqrt().into();
+            let result: Vec<f32> = test_function(&array).into();
 
             for (d, r) in data.iter().zip(result.iter()) {
                 assert_eq!(*r, d.sqrt());
@@ -251,8 +231,9 @@ mod tests {
         }
     }
 
-    #[test]
-    fn fmadd() {
+    #[rstest]
+    #[case::fmadd(Array::<1>::fmadd, |x, y, z| y * z + x)]
+    fn type5(#[case] test_function: Type5Function, #[case] target_function: fn(f32, f32, f32) -> f32) {
         let mut data1 = Vec::new();
         let mut data2 = Vec::new();
         let mut data3 = Vec::new();
@@ -262,10 +243,10 @@ mod tests {
             let array2: Array<1> = data2.clone().into();
             let array3: Array<1> = data3.clone().into();
 
-            let result: Vec<f32> = array3.fmadd(&array1, &array2).into();
+            let result: Vec<f32> = test_function(&array1, &array2, &array3).into();
 
             for (((d1, d2), d3), r) in data1.iter().zip(data2.iter()).zip(data3.iter()).zip(result.iter()) {
-                assert_eq!(*r, *d1 * *d2 + d3);
+                assert_eq!(*r, target_function(*d1, *d2, *d3));
             }
 
             data1.push(i as f32);
@@ -274,31 +255,34 @@ mod tests {
         }
     }
 
-    #[test]
+    #[rstest]
+    #[case::fmadd(Array::<1>::fmadd)]
     #[should_panic]
-    fn fmadd_shape_mismatch() {
+    fn type5_shape_mismatch(#[case] test_function: Type5Function) {
         let a: Array<1> = vec![0.0; 3].into();
         let b: Array<1> = vec![0.0; 4].into();
         let c: Array<1> = vec![0.0; 5].into();
-        c.fmadd(&a, &b);
+
+        test_function(&a, &b, &c);
     }
 
-    #[test]
-    fn fmadd_in_place() {
+    #[rstest]
+    #[case::fmadd(Array::<1>::fmadd_in_place, |x, y, z| y * z + x)]
+    fn fmadd_in_place(#[case] test_function: Type6Function, #[case] target_function: fn(f32, f32, f32) -> f32) {
         let mut data1 = Vec::new();
         let mut data2 = Vec::new();
         let mut data3 = Vec::new();
 
         for i in 0..64 {
-            let array1: Array<1> = data1.clone().into();
+            let mut array1: Array<1> = data1.clone().into();
             let array2: Array<1> = data2.clone().into();
-            let mut array3: Array<1> = data3.clone().into();
+            let array3: Array<1> = data3.clone().into();
 
-            array3.fmadd_in_place(&array1, &array2);
-            let result: Vec<f32> = array3.into();
+            test_function(&mut array1, &array2, &array3);
+            let result: Vec<f32> = array1.into();
 
             for (((d1, d2), d3), r) in data1.iter().zip(data2.iter()).zip(data3.iter()).zip(result.iter()) {
-                assert_eq!(*r, *d1 * *d2 + d3);
+                assert_eq!(*r, target_function(*d1, *d2, *d3));
             }
 
             data1.push(i as f32);
@@ -307,12 +291,14 @@ mod tests {
         }
     }
 
-    #[test]
+    #[rstest]
+    #[case::fmadd(Array::<1>::fmadd_in_place)]
     #[should_panic]
-    fn fmadd_in_place_shape_mismatch() {
-        let a: Array<1> = vec![0.0; 3].into();
+    fn fmadd_in_place_shape_mismatch(#[case] test_function: Type6Function) {
+        let mut a: Array<1> = vec![0.0; 3].into();
         let b: Array<1> = vec![0.0; 4].into();
-        let mut c: Array<1> = vec![0.0; 5].into();       
-        c.fmadd_in_place(&a, &b);
+        let c: Array<1> = vec![0.0; 5].into();       
+        
+        test_function(&mut a, &b, &c);
     }
 }
