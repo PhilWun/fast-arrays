@@ -80,7 +80,7 @@ mod tests {
         let mut array: Array<1> = data.clone().into();
 
         for i in 0..64 {
-            let result = array.set(i, (i + 10) as f32);
+            array.set(i, (i + 10) as f32);
             assert_eq!(array.get(i), (i + 10) as f32);
         }
     }
@@ -123,7 +123,7 @@ mod tests {
     fn add_shape_mismatch() {
         let array1: Array<1> = vec![0.0; 3].into();
         let array2: Array<1> = vec![0.0; 4].into();
-        let sum = array1 + array2;
+        let _ = array1 + array2;
     }
 
     #[test]
@@ -181,7 +181,7 @@ mod tests {
     fn sub_shape_mismatch() {
         let array1: Array<1> = vec![0.0; 3].into();
         let array2: Array<1> = vec![0.0; 4].into();
-        let result = array1 - array2;
+        let _ = array1 - array2;
     }
 
     #[test]
@@ -239,7 +239,7 @@ mod tests {
     fn mul_shape_mismatch() {
         let array1: Array<1> = vec![0.0; 3].into();
         let array2: Array<1> = vec![0.0; 4].into();
-        let result = array1 * array2;
+        let _ = array1 * array2;
     }
 
     #[test]
@@ -297,7 +297,7 @@ mod tests {
     fn div_shape_mismatch() {
         let array1: Array<1> = vec![0.0; 3].into();
         let array2: Array<1> = vec![0.0; 4].into();
-        let result = array1 / array2;
+        let _ = array1 / array2;
     }
 
     #[test]
@@ -435,7 +435,7 @@ mod tests {
         let a: Array<1> = vec![0.0; 3].into();
         let b: Array<1> = vec![0.0; 4].into();
         let c: Array<1> = vec![0.0; 5].into();
-        let result = c.fmadd(&a, &b);
+        c.fmadd(&a, &b);
     }
 
     #[test]
