@@ -76,9 +76,9 @@ impl Array<1> {
         }
     }
 
-    pub fn get(&self, index: usize) -> Option<f32> {
+    pub fn get(&self, index: usize) -> f32 {
         if index >= self.shape[0] {
-            return None;
+            panic!("tried to get index {}, but the array has only {} element(s)", index, self.shape[0]);
         }
 
         let register_index = index / 16;
@@ -86,12 +86,12 @@ impl Array<1> {
 
         let value = m512_to_array(self.data[register_index])[value_index];
 
-        Some(value)
+        value
     }
 
-    pub fn set(&mut self, index: usize, value: f32) -> Option<()> {
+    pub fn set(&mut self, index: usize, value: f32) {
         if index >= self.shape[0] {
-            return None;
+            panic!("tried to set index {}, but the array has only {} element(s)", index, self.shape[0]);
         }
 
         let register_index = index / 16;
@@ -101,13 +101,11 @@ impl Array<1> {
         new_register[value_index] = value;
 
         self.data[register_index] = array_to_m512(new_register);
-
-        Some(())
     }
 
-    pub fn max(&self, other: &Self) -> Result<Self, ()> {
+    pub fn max(&self, other: &Self) -> Self {
         if self.shape[0] != other.shape[0] {
-            return Err(());
+            panic!("the array shapes are not matching: {:?}, {:?}", self.shape, other.shape);
         }
 
         let mut new_data = Vec::with_capacity(self.data.len());
@@ -118,15 +116,15 @@ impl Array<1> {
             }
         }
 
-        Ok(Self {
+        Self {
             data: new_data,
             shape: self.shape.clone()
-        })
+        }
     }
 
-    pub fn min(&self, other: &Self) -> Result<Self, ()> {
+    pub fn min(&self, other: &Self) -> Self {
         if self.shape[0] != other.shape[0] {
-            return Err(());
+            panic!("the array shapes are not matching: {:?}, {:?}", self.shape, other.shape);
         }
 
         let mut new_data = Vec::with_capacity(self.data.len());
@@ -137,10 +135,10 @@ impl Array<1> {
             }
         }
 
-        Ok(Self {
+        Self {
             data: new_data,
             shape: self.shape.clone()
-        })
+        }
     }
 
     pub fn sqrt(&self) -> Self {
@@ -158,13 +156,13 @@ impl Array<1> {
         }
     }
 
-    pub fn fmadd(&self, a: &Self, b: &Self) -> Result<Self, ()> {
+    pub fn fmadd(&self, a: &Self, b: &Self) -> Self {
         if self.shape[0] != a.shape[0] {
-            return Err(());
+            panic!("the array shapes are not matching: {:?}, {:?}", self.shape, a.shape);
         }
 
         if self.shape[0] != b.shape[0] {
-            return Err(());
+            panic!("the array shapes are not matching: {:?}, {:?}", self.shape, b.shape);
         }
 
         let mut new_data = Vec::with_capacity(self.data.len());
@@ -175,19 +173,19 @@ impl Array<1> {
             }
         }
 
-        Ok(Self {
+        Self {
             data: new_data,
             shape: self.shape.clone()
-        })
+        }
     }
 
-    pub fn fmadd_in_place(&mut self, a: &Self, b: &Self) -> Result<(), ()> {
+    pub fn fmadd_in_place(&mut self, a: &Self, b: &Self)  {
         if self.shape[0] != a.shape[0] {
-            return Err(());
+            panic!("the array shapes are not matching: {:?}, {:?}", self.shape, a.shape);
         }
 
         if self.shape[0] != b.shape[0] {
-            return Err(());
+            panic!("the array shapes are not matching: {:?}, {:?}", self.shape, b.shape);
         }
 
         unsafe {
@@ -195,17 +193,15 @@ impl Array<1> {
                 *c = _mm512_fmadd_ps(*a, *b, *c);
             }
         }
-
-        Ok(())
     }
 }
 
 impl Add for Array<1> {
-    type Output = Result<Self, ()>;
+    type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
         if self.shape[0] != rhs.shape[0] {
-            return Err(());
+            panic!("the array shapes are not matching: {:?}, {:?}", self.shape, rhs.shape);
         }
 
         let mut new_data = Vec::with_capacity(self.data.len());
@@ -216,17 +212,17 @@ impl Add for Array<1> {
             }
         }
 
-        Ok(Self {
+        Self {
             data: new_data,
             shape: self.shape.clone(),
-        })
+        }
     }
 }
 
 impl AddAssign for Array<1> {
     fn add_assign(&mut self, rhs: Self) {
         if self.shape[0] != rhs.shape[0] {
-            panic!();
+            panic!("the array shapes are not matching: {:?}, {:?}", self.shape, rhs.shape);
         }
 
         unsafe {
@@ -238,11 +234,11 @@ impl AddAssign for Array<1> {
 }
 
 impl Sub for Array<1> {
-    type Output = Result<Self, ()>;
+    type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
         if self.shape[0] != rhs.shape[0] {
-            return Err(());
+            panic!("the array shapes are not matching: {:?}, {:?}", self.shape, rhs.shape);
         }
 
         let mut new_data = Vec::with_capacity(self.data.len());
@@ -253,17 +249,17 @@ impl Sub for Array<1> {
             }
         }
 
-        Ok(Self {
+        Self {
             data: new_data,
             shape: self.shape.clone(),
-        })
+        }
     }
 }
 
 impl SubAssign for Array<1> {
     fn sub_assign(&mut self, rhs: Self) {
         if self.shape[0] != rhs.shape[0] {
-            panic!();
+            panic!("the array shapes are not matching: {:?}, {:?}", self.shape, rhs.shape);
         }
 
         unsafe {
@@ -275,11 +271,11 @@ impl SubAssign for Array<1> {
 }
 
 impl Mul for Array<1> {
-    type Output = Result<Self, ()>;
+    type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
         if self.shape[0] != rhs.shape[0] {
-            return Err(());
+            panic!("the array shapes are not matching: {:?}, {:?}", self.shape, rhs.shape);
         }
 
         let mut new_data = Vec::with_capacity(self.data.len());
@@ -290,17 +286,17 @@ impl Mul for Array<1> {
             }
         }
 
-        Ok(Self {
+        Self {
             data: new_data,
             shape: self.shape.clone(),
-        })
+        }
     }
 }
 
 impl MulAssign for Array<1> {
     fn mul_assign(&mut self, rhs: Self) {
         if self.shape[0] != rhs.shape[0] {
-            panic!();
+            panic!("the array shapes are not matching: {:?}, {:?}", self.shape, rhs.shape);
         }
 
         unsafe {
@@ -312,11 +308,11 @@ impl MulAssign for Array<1> {
 }
 
 impl Div for Array<1> {
-    type Output = Result<Self, ()>;
+    type Output = Self;
 
     fn div(self, rhs: Self) -> Self::Output {
         if self.shape[0] != rhs.shape[0] {
-            return Err(());
+            panic!("the array shapes are not matching: {:?}, {:?}", self.shape, rhs.shape);
         }
 
         let mut new_data = Vec::with_capacity(self.data.len());
@@ -327,17 +323,17 @@ impl Div for Array<1> {
             }
         }
 
-        Ok(Self {
+        Self {
             data: new_data,
             shape: self.shape.clone(),
-        })
+        }
     }
 }
 
 impl DivAssign for Array<1> {
     fn div_assign(&mut self, rhs: Self) {
         if self.shape[0] != rhs.shape[0] {
-            panic!();
+            panic!("the array shapes are not matching: {:?}, {:?}", self.shape, rhs.shape);
         }
 
         unsafe {

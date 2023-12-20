@@ -15,7 +15,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn conversion_different_sizes() {
+    fn conversion() {
         let mut values = Vec::new();
 
         for i in 0..64 {
@@ -29,7 +29,7 @@ mod tests {
     }
 
     #[test]
-    fn zeros_different_sizes() {
+    fn zeros() {
         let mut values = Vec::new();
 
         for i in 0..64 {
@@ -51,9 +51,22 @@ mod tests {
 
         let array: Array<1> = data.clone().into();
 
-        for i in 0..128 {
-            assert_eq!(array.get(i), data.get(i).map(|x| *x));
+        for i in 0..64 {
+            assert_eq!(array.get(i), *data.get(i).unwrap());
         }
+    }
+
+    #[test]
+    #[should_panic]
+    fn get_out_of_bounds() {
+        let mut data = Vec::new();
+
+        for i in 0..64 {
+            data.push(i as f32);
+        }
+
+        let array: Array<1> = data.clone().into();
+        array.get(64);
     }
 
     #[test]
@@ -66,20 +79,27 @@ mod tests {
 
         let mut array: Array<1> = data.clone().into();
 
-        for i in 0..128 {
+        for i in 0..64 {
             let result = array.set(i, (i + 10) as f32);
-
-            if i < 64 {
-                assert_eq!(result, Some(()));
-                assert_eq!(array.get(i), Some((i + 10) as f32));
-            } else {
-                assert_eq!(result, None);
-            }
+            assert_eq!(array.get(i), (i + 10) as f32);
         }
     }
 
     #[test]
-    fn add_different_sizes() {
+    #[should_panic]
+    fn set_out_of_bounds() {
+        let mut data = Vec::new();
+
+        for i in 0..64 {
+            data.push(i as f32);
+        }
+
+        let mut array: Array<1> = data.clone().into();
+        array.set(64, 42.0);
+    }
+
+    #[test]
+    fn add() {
         let mut data1 = Vec::new();
         let mut data2 = Vec::new();
 
@@ -87,7 +107,7 @@ mod tests {
             let array1: Array<1> = data1.clone().into();
             let array2: Array<1> = data2.clone().into();
 
-            let result: Vec<f32> = (array1 + array2).unwrap().into();
+            let result: Vec<f32> = (array1 + array2).into();
 
             for ((d1, d2), r) in data1.iter().zip(data2.iter()).zip(result.iter()) {
                 assert_eq!(*r, d1 + d2);
@@ -99,16 +119,15 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn add_shape_mismatch() {
         let array1: Array<1> = vec![0.0; 3].into();
         let array2: Array<1> = vec![0.0; 4].into();
         let sum = array1 + array2;
-
-        assert!(sum.is_err());
     }
 
     #[test]
-    fn add_assign_different_sizes() {
+    fn add_assign() {
         let mut data1 = Vec::new();
         let mut data2 = Vec::new();
 
@@ -138,7 +157,7 @@ mod tests {
     }
 
     #[test]
-    fn sub_different_sizes() {
+    fn sub() {
         let mut data1 = Vec::new();
         let mut data2 = Vec::new();
 
@@ -146,7 +165,7 @@ mod tests {
             let array1: Array<1> = data1.clone().into();
             let array2: Array<1> = data2.clone().into();
 
-            let result: Vec<f32> = (array1 - array2).unwrap().into();
+            let result: Vec<f32> = (array1 - array2).into();
 
             for ((d1, d2), r) in data1.iter().zip(data2.iter()).zip(result.iter()) {
                 assert_eq!(*r, d1 - d2);
@@ -158,16 +177,15 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn sub_shape_mismatch() {
         let array1: Array<1> = vec![0.0; 3].into();
         let array2: Array<1> = vec![0.0; 4].into();
         let result = array1 - array2;
-
-        assert!(result.is_err());
     }
 
     #[test]
-    fn sub_assign_different_sizes() {
+    fn sub_assign() {
         let mut data1 = Vec::new();
         let mut data2 = Vec::new();
 
@@ -197,7 +215,7 @@ mod tests {
     }
 
     #[test]
-    fn mul_different_sizes() {
+    fn mul() {
         let mut data1 = Vec::new();
         let mut data2 = Vec::new();
 
@@ -205,7 +223,7 @@ mod tests {
             let array1: Array<1> = data1.clone().into();
             let array2: Array<1> = data2.clone().into();
 
-            let result: Vec<f32> = (array1 * array2).unwrap().into();
+            let result: Vec<f32> = (array1 * array2).into();
 
             for ((d1, d2), r) in data1.iter().zip(data2.iter()).zip(result.iter()) {
                 assert_eq!(*r, d1 * d2);
@@ -217,16 +235,15 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn mul_shape_mismatch() {
         let array1: Array<1> = vec![0.0; 3].into();
         let array2: Array<1> = vec![0.0; 4].into();
         let result = array1 * array2;
-
-        assert!(result.is_err());
     }
 
     #[test]
-    fn mul_assign_different_sizes() {
+    fn mul_assign() {
         let mut data1 = Vec::new();
         let mut data2 = Vec::new();
 
@@ -256,7 +273,7 @@ mod tests {
     }
 
     #[test]
-    fn div_different_sizes() {
+    fn div() {
         let mut data1 = Vec::new();
         let mut data2 = Vec::new();
 
@@ -264,7 +281,7 @@ mod tests {
             let array1: Array<1> = data1.clone().into();
             let array2: Array<1> = data2.clone().into();
 
-            let result: Vec<f32> = (array1 / array2).unwrap().into();
+            let result: Vec<f32> = (array1 / array2).into();
 
             for ((d1, d2), r) in data1.iter().zip(data2.iter()).zip(result.iter()) {
                 assert_eq!(*r, d1 / d2);
@@ -276,16 +293,15 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn div_shape_mismatch() {
         let array1: Array<1> = vec![0.0; 3].into();
         let array2: Array<1> = vec![0.0; 4].into();
         let result = array1 / array2;
-
-        assert!(result.is_err());
     }
 
     #[test]
-    fn div_assign_different_sizes() {
+    fn div_assign() {
         let mut data1 = Vec::new();
         let mut data2 = Vec::new();
 
@@ -315,7 +331,7 @@ mod tests {
     }
 
     #[test]
-    fn max_different_sizes() {
+    fn max() {
         let mut data1 = Vec::new();
         let mut data2 = Vec::new();
 
@@ -323,7 +339,7 @@ mod tests {
             let array1: Array<1> = data1.clone().into();
             let array2: Array<1> = data2.clone().into();
 
-            let result: Vec<f32> = array1.max(&array2).unwrap().into();
+            let result: Vec<f32> = array1.max(&array2).into();
 
             for ((d1, d2), r) in data1.iter().zip(data2.iter()).zip(result.iter()) {
                 assert_eq!(*r, d1.max(*d2));
@@ -337,16 +353,15 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn max_shape_mismatch() {
         let array1: Array<1> = vec![0.0; 3].into();
         let array2: Array<1> = vec![0.0; 4].into();
-        let result = array1.max(&array2);
-
-        assert!(result.is_err());
+        array1.max(&array2);
     }
 
     #[test]
-    fn min_different_sizes() {
+    fn min() {
         let mut data1 = Vec::new();
         let mut data2 = Vec::new();
 
@@ -354,7 +369,7 @@ mod tests {
             let array1: Array<1> = data1.clone().into();
             let array2: Array<1> = data2.clone().into();
 
-            let result: Vec<f32> = array1.min(&array2).unwrap().into();
+            let result: Vec<f32> = array1.min(&array2).into();
 
             for ((d1, d2), r) in data1.iter().zip(data2.iter()).zip(result.iter()) {
                 assert_eq!(*r, d1.min(*d2));
@@ -368,16 +383,15 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn min_shape_mismatch() {
         let array1: Array<1> = vec![0.0; 3].into();
         let array2: Array<1> = vec![0.0; 4].into();
-        let result = array1.min(&array2);
-
-        assert!(result.is_err());
+        array1.min(&array2);
     }
 
     #[test]
-    fn sqrt_different_sizes() {
+    fn sqrt() {
         let mut data = Vec::new();
 
         for i in 0..64 {
@@ -393,7 +407,7 @@ mod tests {
     }
 
     #[test]
-    fn fmadd_different_sizes() {
+    fn fmadd() {
         let mut data1 = Vec::new();
         let mut data2 = Vec::new();
         let mut data3 = Vec::new();
@@ -403,7 +417,7 @@ mod tests {
             let array2: Array<1> = data2.clone().into();
             let array3: Array<1> = data3.clone().into();
 
-            let result: Vec<f32> = array3.fmadd(&array1, &array2).unwrap().into();
+            let result: Vec<f32> = array3.fmadd(&array1, &array2).into();
 
             for (((d1, d2), d3), r) in data1.iter().zip(data2.iter()).zip(data3.iter()).zip(result.iter()) {
                 assert_eq!(*r, *d1 * *d2 + d3);
@@ -416,17 +430,16 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn fmadd_shape_mismatch() {
         let a: Array<1> = vec![0.0; 3].into();
         let b: Array<1> = vec![0.0; 4].into();
         let c: Array<1> = vec![0.0; 5].into();
         let result = c.fmadd(&a, &b);
-
-        assert!(result.is_err());
     }
 
     #[test]
-    fn fmadd_in_place_different_sizes() {
+    fn fmadd_in_place() {
         let mut data1 = Vec::new();
         let mut data2 = Vec::new();
         let mut data3 = Vec::new();
@@ -436,7 +449,7 @@ mod tests {
             let array2: Array<1> = data2.clone().into();
             let mut array3: Array<1> = data3.clone().into();
 
-            array3.fmadd_in_place(&array1, &array2).unwrap();
+            array3.fmadd_in_place(&array1, &array2);
             let result: Vec<f32> = array3.into();
 
             for (((d1, d2), d3), r) in data1.iter().zip(data2.iter()).zip(data3.iter()).zip(result.iter()) {
@@ -450,12 +463,11 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn fmadd_in_place_shape_mismatch() {
         let a: Array<1> = vec![0.0; 3].into();
         let b: Array<1> = vec![0.0; 4].into();
         let mut c: Array<1> = vec![0.0; 5].into();       
-        let result = c.fmadd_in_place(&a, &b);
-
-        assert!(result.is_err());
+        c.fmadd_in_place(&a, &b);
     }
 }
