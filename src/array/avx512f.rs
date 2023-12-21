@@ -1,10 +1,10 @@
 use std::{
-    arch::x86_64::{__m512, _mm512_add_ps, _mm512_sub_ps, _mm512_mul_ps, _mm512_div_ps, _mm512_max_ps, _mm512_min_ps, _mm512_sqrt_ps, _mm512_fmadd_ps, _mm512_abs_ps},
+    arch::x86_64::{__m512, _mm512_add_ps, _mm512_sub_ps, _mm512_mul_ps, _mm512_div_ps, _mm512_max_ps, _mm512_min_ps, _mm512_sqrt_ps, _mm512_fmadd_ps, _mm512_abs_ps, _mm512_cmpeq_ps_mask, _mm512_cmpneq_ps_mask, _mm512_cmpnle_ps_mask, _mm512_cmpnlt_ps_mask, _mm512_cmplt_ps_mask, _mm512_cmple_ps_mask},
     ops::{Add, Sub, Mul, Div, AddAssign, SubAssign, MulAssign, DivAssign},
     simd::f32x16
 };
 
-use super::Array1D;
+use crate::{Array1D, Mask1D};
 
 fn m512_to_array(value: __m512) -> [f32; 16] {
     let value: f32x16 = value.into();
@@ -118,7 +118,7 @@ impl Array1D {
 
         Self {
             data: new_data,
-            len: self.len.clone()
+            len: self.len
         }
     }
 
@@ -149,7 +149,7 @@ impl Array1D {
 
         Self {
             data: new_data,
-            len: self.len.clone()
+            len: self.len
         }
     }
 
@@ -184,7 +184,7 @@ impl Array1D {
 
         Self {
             data: new_data,
-            len: self.len.clone()
+            len: self.len
         }
     }
 
@@ -215,7 +215,7 @@ impl Array1D {
 
         Self {
             data: new_data,
-            len: self.len.clone()
+            len: self.len
         }
     }
 
@@ -238,7 +238,7 @@ impl Array1D {
 
         Self {
             data: new_data,
-            len: self.len.clone()
+            len: self.len
         }
     }
 
@@ -261,7 +261,7 @@ impl Array1D {
 
         Self {
             data: new_data,
-            len: self.len.clone()
+            len: self.len
         }
     }
 
@@ -270,6 +270,96 @@ impl Array1D {
             for d in self.data.iter_mut() {
                 *d = _mm512_abs_ps(*d);
             }
+        }
+    }
+
+    pub fn compare_equal(&self, other: &Self) -> Mask1D {
+        let mut masks = Vec::with_capacity(self.data.len());
+
+        unsafe {
+            for (d1, d2) in self.data.iter().zip(other.data.iter()) {
+                masks.push(_mm512_cmpeq_ps_mask(*d1, *d2));
+            }
+        }
+
+        Mask1D {
+            masks,
+            len: self.len
+        }
+    }
+
+    pub fn compare_not_equal(&self, other: &Self) -> Mask1D {
+        let mut masks = Vec::with_capacity(self.data.len());
+
+        unsafe {
+            for (d1, d2) in self.data.iter().zip(other.data.iter()) {
+                masks.push(_mm512_cmpneq_ps_mask(*d1, *d2));
+            }
+        }
+
+        Mask1D {
+            masks,
+            len: self.len
+        }
+    }
+
+    pub fn compare_greater_than(&self, other: &Self) -> Mask1D {
+        let mut masks = Vec::with_capacity(self.data.len());
+
+        unsafe {
+            for (d1, d2) in self.data.iter().zip(other.data.iter()) {
+                masks.push(_mm512_cmpnle_ps_mask(*d1, *d2));
+            }
+        }
+
+        Mask1D {
+            masks,
+            len: self.len
+        }
+    }
+
+    pub fn compare_greater_than_or_equal(&self, other: &Self) -> Mask1D {
+        let mut masks = Vec::with_capacity(self.data.len());
+
+        unsafe {
+            for (d1, d2) in self.data.iter().zip(other.data.iter()) {
+                masks.push(_mm512_cmpnlt_ps_mask(*d1, *d2));
+            }
+        }
+
+        Mask1D {
+            masks,
+            len: self.len
+        }
+    }
+
+    pub fn compare_less_than(&self, other: &Self) -> Mask1D {
+        let mut masks = Vec::with_capacity(self.data.len());
+
+        unsafe {
+            for (d1, d2) in self.data.iter().zip(other.data.iter()) {
+                masks.push(_mm512_cmplt_ps_mask(*d1, *d2));
+            }
+        }
+
+        Mask1D {
+            masks,
+            len: self.len
+        }
+    }
+
+    pub fn compare_less_than_or_equal(&self, other: &Self) -> Mask1D {
+        let mut masks = Vec::with_capacity(self.data.len());
+
+        unsafe {
+            for (d1, d2) in self.data.iter().zip(other.data.iter()) {
+                masks.push(_mm512_cmple_ps_mask(*d1, *d2));
+            }
+        }
+
+        Mask1D {
+            masks,
+            len: self.len
         }
     }
 }
