@@ -1,5 +1,5 @@
 use std::{
-    arch::x86_64::{__m512, _mm512_add_ps, _mm512_sub_ps, _mm512_mul_ps, _mm512_div_ps, _mm512_max_ps, _mm512_min_ps, _mm512_sqrt_ps, _mm512_fmadd_ps, _mm512_abs_ps, _mm512_cmpeq_ps_mask, _mm512_cmpneq_ps_mask, _mm512_cmpnle_ps_mask, _mm512_cmpnlt_ps_mask, _mm512_cmplt_ps_mask, _mm512_cmple_ps_mask},
+    arch::x86_64::{__m512, _mm512_add_ps, _mm512_sub_ps, _mm512_mul_ps, _mm512_div_ps, _mm512_max_ps, _mm512_min_ps, _mm512_sqrt_ps, _mm512_fmadd_ps, _mm512_abs_ps, _mm512_cmpeq_ps_mask, _mm512_cmpneq_ps_mask, _mm512_cmpnle_ps_mask, _mm512_cmpnlt_ps_mask, _mm512_cmplt_ps_mask, _mm512_cmple_ps_mask, _mm512_mul_round_ps, _MM_FROUND_TO_NEAREST_INT, _MM_FROUND_NO_EXC, _mm512_cvtps_epi32, _mm512_slli_epi32, _mm512_castsi512_ps, _mm512_add_epi32, _mm512_castps_si512},
     ops::{Add, Sub, Mul, Div, AddAssign, SubAssign, MulAssign, DivAssign},
     simd::f32x16
 };
@@ -360,6 +360,52 @@ impl Array1D {
         Mask1D {
             masks,
             len: self.len
+        }
+    }
+    
+    pub fn exp(&self) -> Array1D {
+        let mut tmp = self.clone();
+        tmp.exp_in_place();
+
+        tmp
+    }
+
+    pub fn exp_in_place(&mut self) {
+        // adapted from https://stackoverflow.com/a/49090523
+
+        let l2e = array_to_m512([1.442695041f32; 16]); // log2(e)
+        let l2h = array_to_m512([-6.93145752e-1f32; 16]); // -log(2)_hi
+        let l2l = array_to_m512([-1.42860677e-6f32; 16]); // -log(2)_lo
+        // coefficients for core approximation to exp() in [-log(2)/2, log(2)/2]
+        let c0 = array_to_m512([0.041944388f32; 16]);
+        let c1 = array_to_m512([0.168006673f32; 16]);
+        let c2 = array_to_m512([0.499999940f32; 16]);
+        let c3 = array_to_m512([0.999956906f32; 16]);
+        let c4 = array_to_m512([0.999999642f32; 16]);
+
+        unsafe {
+            for x in self.data.iter_mut() {
+                // exp(x) = 2^i * e^f; i = rint (log2(e) * x), f = x - log(2) * i
+                let t = _mm512_mul_ps(*x, l2e);
+                let mut r = _mm512_mul_round_ps(*x, l2e, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+                let mut f = _mm512_fmadd_ps(r, l2h, *x); // x - log(2)_hi * r
+                f = _mm512_fmadd_ps(r, l2l, f); // f = x - log(2)_hi * r - log(2)_lo * r
+
+                let i = _mm512_cvtps_epi32(t); // i = (int)rint(t)
+
+                // p ~= exp (f), -log(2)/2 <= f <= log(2)/2
+                let mut p = c0; // c0
+                p = _mm512_fmadd_ps(p, f, c1); // c0*f+c1
+                p = _mm512_fmadd_ps(p, f, c2); // (c0*f+c1)*f+c2
+                p = _mm512_fmadd_ps(p, f, c3); // ((c0*f+c1)*f+c2)*f+c3
+                p = _mm512_fmadd_ps(p, f, c4); // (((c0*f+c1)*f+c2)*f+c3)*f+c4 ~= exp(f)
+
+                // exp(x) = 2^i * p
+                let j = _mm512_slli_epi32(i, 23); // i << 23
+                r = _mm512_castsi512_ps(_mm512_add_epi32(j, _mm512_castps_si512(p))); // r = p * 2^i
+
+                *x = r;
+            }
         }
     }
 }

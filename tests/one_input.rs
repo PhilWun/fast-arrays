@@ -9,6 +9,7 @@ use rstest::rstest;
 #[case::sqrt(Array1D::sqrt_in_place, f32::sqrt)]
 #[case::square(Array1D::square_in_place, |x| x * x)]
 #[case::abs(Array1D::abs_in_place, f32::abs)]
+// #[case::exp(Array1D::exp_in_place, f32::exp)]
 fn in_place(#[case] test_function: fn(&mut Array1D), #[case] target_function: fn(f32) -> f32) {
     for i in 0..64 {
         let data1 = get_random_f32_vec(0, i);
@@ -27,6 +28,7 @@ fn in_place(#[case] test_function: fn(&mut Array1D), #[case] target_function: fn
 #[case::sqrt(Array1D::sqrt, f32::sqrt)]
 #[case::square(Array1D::square, |x| x * x)]
 #[case::abs(Array1D::abs, f32::abs)]
+// #[case::exp(Array1D::exp, f32::exp)]
 fn ref_out_of_place(#[case] test_function: fn(&Array1D) -> Array1D, #[case] target_function: fn(f32) -> f32) {
     for i in 0..64 {
         let data = get_random_f32_vec(0, i);
