@@ -13,6 +13,7 @@ pub fn get_random_f32_vec(seed: u64, len: usize) -> Vec<f32> {
     data
 }
 
+#[allow(dead_code)]
 pub fn assert_approximate(a: f32, b: f32) {
     if a.is_nan() && b.is_nan() {
         return;
