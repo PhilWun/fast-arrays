@@ -1,5 +1,5 @@
 use std::{
-    arch::x86_64::{__m512, _mm512_add_ps, _mm512_sub_ps, _mm512_mul_ps, _mm512_div_ps, _mm512_max_ps, _mm512_min_ps, _mm512_sqrt_ps, _mm512_fmadd_ps},
+    arch::x86_64::{__m512, _mm512_add_ps, _mm512_sub_ps, _mm512_mul_ps, _mm512_div_ps, _mm512_max_ps, _mm512_min_ps, _mm512_sqrt_ps, _mm512_fmadd_ps, _mm512_abs_ps},
     ops::{Add, Sub, Mul, Div, AddAssign, SubAssign, MulAssign, DivAssign},
     simd::f32x16
 };
@@ -64,6 +64,8 @@ impl From<Vec<f32>> for Array<1> {
     }
 }
 
+// TODO: implement clone
+
 impl Array<1> {
     pub fn zeros(shape: usize) -> Self {
         let register_count = shape.div_ceil(16);
@@ -122,6 +124,18 @@ impl Array<1> {
         }
     }
 
+    pub fn max_in_place(&mut self, other: &Self) {
+        if self.shape[0] != other.shape[0] {
+            panic!("the array shapes are not matching: {:?}, {:?}", self.shape, other.shape);
+        }
+
+        unsafe {
+            for (l, r) in self.data.iter_mut().zip(other.data.iter()) {
+                *l = _mm512_max_ps(*l, *r);
+            }
+        }
+    }
+
     pub fn min(&self, other: &Self) -> Self {
         if self.shape[0] != other.shape[0] {
             panic!("the array shapes are not matching: {:?}, {:?}", self.shape, other.shape);
@@ -141,18 +155,15 @@ impl Array<1> {
         }
     }
 
-    pub fn sqrt(&self) -> Self {
-        let mut new_data = Vec::with_capacity(self.data.len());
-
-        unsafe {
-            for d in self.data.iter() {
-                new_data.push(_mm512_sqrt_ps(*d));
-            }
+    pub fn min_in_place(&mut self, other: &Self) {
+        if self.shape[0] != other.shape[0] {
+            panic!("the array shapes are not matching: {:?}, {:?}", self.shape, other.shape);
         }
 
-        Self {
-            data: new_data,
-            shape: self.shape.clone()
+        unsafe {
+            for (l, r) in self.data.iter_mut().zip(other.data.iter()) {
+                *l = _mm512_min_ps(*l, *r);
+            }
         }
     }
 
@@ -191,6 +202,52 @@ impl Array<1> {
         unsafe {
             for ((a, b), c) in a.data.iter().zip(b.data.iter()).zip(self.data.iter_mut()) {
                 *c = _mm512_fmadd_ps(*a, *b, *c);
+            }
+        }
+    }
+
+    pub fn sqrt(&self) -> Self {
+        let mut new_data = Vec::with_capacity(self.data.len());
+
+        unsafe {
+            for d in self.data.iter() {
+                new_data.push(_mm512_sqrt_ps(*d));
+            }
+        }
+
+        Self {
+            data: new_data,
+            shape: self.shape.clone()
+        }
+    }
+
+    pub fn sqrt_in_place(&mut self) {
+        unsafe {
+            for d in self.data.iter_mut() {
+                *d = _mm512_sqrt_ps(*d);
+            }
+        }
+    }
+
+    pub fn abs(&self) -> Self {
+        let mut new_data = Vec::with_capacity(self.data.len());
+
+        unsafe {
+            for d in self.data.iter() {
+                new_data.push(_mm512_abs_ps(*d));
+            }
+        }
+
+        Self {
+            data: new_data,
+            shape: self.shape.clone()
+        }
+    }
+
+    pub fn abs_in_place(&mut self) {
+        unsafe {
+            for d in self.data.iter_mut() {
+                *d = _mm512_abs_ps(*d);
             }
         }
     }

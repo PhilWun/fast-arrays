@@ -26,6 +26,8 @@ mod tests {
     type Type4Function = fn(&Array<1>) -> Array<1>;
     type Type5Function = fn(&Array<1>, &Array<1>, &Array<1>) -> Array<1>;
     type Type6Function = fn(&mut Array<1>, &Array<1>, &Array<1>);
+    type Type7Function = fn(&mut Array<1>, &Array<1>);
+    type Type8Function = fn(&mut Array<1>);
 
     fn get_random_f32_vec(seed: u64, len: usize) -> Vec<f32> {
         let mut rng = ChaCha20Rng::seed_from_u64(seed);
@@ -37,6 +39,14 @@ mod tests {
         }
         
         data
+    }
+
+    fn assert_approximate(a: f32, b: f32) {
+        if a.is_nan() && b.is_nan() {
+            return;
+        }
+
+        assert!((a - b).abs() < 0.001, "difference too big between {} and {}", a, b);
     }
 
     #[test]
@@ -194,15 +204,16 @@ mod tests {
     }
 
     #[rstest]
-    #[case::sqrt(Array::<1>::sqrt)]
-    fn type4(#[case] test_function: Type4Function) {
+    #[case::sqrt(Array::<1>::sqrt, f32::sqrt)]
+    #[case::abs(Array::<1>::abs, f32::abs)]
+    fn type4(#[case] test_function: Type4Function, #[case] target_function: fn(f32) -> f32) {
         for i in 0..64 {
             let data = get_random_f32_vec(0, i);
             let array: Array<1> = data.clone().into();
             let result: Vec<f32> = test_function(&array).into();
 
             for (d, r) in data.iter().zip(result.iter()) {
-                assert_eq!(*r, d.sqrt());
+                assert_approximate(*r, target_function(*d));
             }
         }
     }
@@ -222,7 +233,7 @@ mod tests {
             let result: Vec<f32> = test_function(&array1, &array2, &array3).into();
 
             for (((d1, d2), d3), r) in data1.iter().zip(data2.iter()).zip(data3.iter()).zip(result.iter()) {
-                assert_eq!(*r, target_function(*d1, *d2, *d3));
+                assert_approximate(*r, target_function(*d1, *d2, *d3));
             }
         }
     }
@@ -240,7 +251,7 @@ mod tests {
 
     #[rstest]
     #[case::fmadd(Array::<1>::fmadd_in_place, |x, y, z| y * z + x)]
-    fn fmadd_in_place(#[case] test_function: Type6Function, #[case] target_function: fn(f32, f32, f32) -> f32) {
+    fn type6(#[case] test_function: Type6Function, #[case] target_function: fn(f32, f32, f32) -> f32) {
         for i in 0..64 {
             let data1 = get_random_f32_vec(0, i);
             let data2 = get_random_f32_vec(1, i);
@@ -254,7 +265,7 @@ mod tests {
             let result: Vec<f32> = array1.into();
 
             for (((d1, d2), d3), r) in data1.iter().zip(data2.iter()).zip(data3.iter()).zip(result.iter()) {
-                assert_eq!(*r, target_function(*d1, *d2, *d3));
+                assert_approximate(*r, target_function(*d1, *d2, *d3));
             }
         }
     }
@@ -262,11 +273,58 @@ mod tests {
     #[rstest]
     #[case::fmadd(Array::<1>::fmadd_in_place)]
     #[should_panic]
-    fn fmadd_in_place_shape_mismatch(#[case] test_function: Type6Function) {
+    fn type6_shape_mismatch(#[case] test_function: Type6Function) {
         let mut a: Array<1> = get_random_f32_vec(0, 3).into();
         let b: Array<1> = get_random_f32_vec(1, 4).into();
         let c: Array<1> = get_random_f32_vec(2, 5).into();       
         
         test_function(&mut a, &b, &c);
+    }
+
+    #[rstest]
+    #[case::max(Array::<1>::max_in_place, f32::max)]
+    #[case::min(Array::<1>::min_in_place, f32::min)]
+    fn type7(#[case] test_function: Type7Function, #[case] target_function: fn(f32, f32) -> f32) {
+        for i in 0..64 {
+            let data1 = get_random_f32_vec(0, i);
+            let data2 = get_random_f32_vec(1, i);
+
+            let mut array1: Array<1> = data1.clone().into();
+            let array2: Array<1> = data2.clone().into();
+
+            test_function(&mut array1, &array2);
+            let result: Vec<f32> = array1.into();
+
+            for ((d1, d2), r) in data1.iter().zip(data2.iter()).zip(result.iter()) {
+                assert_eq!(*r, target_function(*d1, *d2));
+            }
+        }
+    }
+
+    #[rstest]
+    #[case::max(Array::<1>::max_in_place)]
+    #[case::min(Array::<1>::min_in_place)]
+    #[should_panic]
+    fn type7_shape_mismatch(#[case] test_function: Type7Function) {
+        let mut array1: Array<1> = get_random_f32_vec(0, 3).into();
+        let array2: Array<1> = get_random_f32_vec(1, 4).into();
+        let _ = test_function(&mut array1, &array2);
+    }
+
+    #[rstest]
+    #[case::sqrt(Array::<1>::sqrt_in_place, f32::sqrt)]
+    #[case::abs(Array::<1>::abs_in_place, f32::abs)]
+    fn type8(#[case] test_function: Type8Function, #[case] target_function: fn(f32) -> f32) {
+        for i in 0..64 {
+            let data1 = get_random_f32_vec(0, i);
+            let mut array1: Array<1> = data1.clone().into();
+
+            test_function(&mut array1);
+            let result: Vec<f32> = array1.into();
+
+            for (d, r) in data1.iter().zip(result.iter()) {
+                assert_approximate(*r, target_function(*d));
+            }
+        }
     }
 }
