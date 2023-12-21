@@ -12,7 +12,7 @@ use rstest::rstest;
 #[case::ge(Array1D::compare_greater_than_or_equal, f32::ge)]
 #[case::lt(Array1D::compare_less_than, f32::lt)]
 #[case::le(Array1D::compare_less_than_or_equal, f32::le)]
-fn out_of_place_ref(#[case] test_function: fn(&Array1D, &Array1D) -> Mask1D, #[case] target_function: fn(&f32, &f32) -> bool) {
+fn comparison(#[case] test_function: fn(&Array1D, &Array1D) -> Mask1D, #[case] target_function: fn(&f32, &f32) -> bool) {
     for i in 0..64 {
         let data1 = get_random_f32_vec(0, i);
         let data2 = get_random_f32_vec(1, i);
