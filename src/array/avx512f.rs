@@ -227,6 +227,29 @@ impl Array<1> {
         }
     }
 
+    pub fn square(&self) -> Self {
+        let mut new_data = Vec::with_capacity(self.data.len());
+
+        unsafe {
+            for d in self.data.iter() {
+                new_data.push(_mm512_mul_ps(*d, *d));
+            }
+        }
+
+        Self {
+            data: new_data,
+            shape: self.shape.clone()
+        }
+    }
+
+    pub fn square_in_place(&mut self) {
+        unsafe {
+            for d in self.data.iter_mut() {
+                *d = _mm512_mul_ps(*d, *d);
+            }
+        }
+    }
+
     pub fn abs(&self) -> Self {
         let mut new_data = Vec::with_capacity(self.data.len());
 

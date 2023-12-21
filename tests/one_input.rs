@@ -7,6 +7,7 @@ use rstest::rstest;
 
 #[rstest]
 #[case::sqrt(Array::<1>::sqrt_in_place, f32::sqrt)]
+#[case::square(Array::<1>::square_in_place, |x| x * x)]
 #[case::abs(Array::<1>::abs_in_place, f32::abs)]
 fn in_place(#[case] test_function: fn(&mut Array<1>), #[case] target_function: fn(f32) -> f32) {
     for i in 0..64 {
@@ -24,6 +25,7 @@ fn in_place(#[case] test_function: fn(&mut Array<1>), #[case] target_function: f
 
 #[rstest]
 #[case::sqrt(Array::<1>::sqrt, f32::sqrt)]
+#[case::square(Array::<1>::square, |x| x * x)]
 #[case::abs(Array::<1>::abs, f32::abs)]
 fn ref_out_of_place(#[case] test_function: fn(&Array<1>) -> Array<1>, #[case] target_function: fn(f32) -> f32) {
     for i in 0..64 {
