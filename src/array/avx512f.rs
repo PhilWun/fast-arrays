@@ -64,8 +64,6 @@ impl From<Vec<f32>> for Array<1> {
     }
 }
 
-// TODO: implement clone
-
 impl Array<1> {
     pub fn zeros(shape: usize) -> Self {
         let register_count = shape.div_ceil(16);
