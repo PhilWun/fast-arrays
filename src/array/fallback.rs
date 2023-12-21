@@ -1,29 +1,29 @@
 use std::ops::{Add, Sub, Mul, Div, AddAssign, SubAssign, MulAssign, DivAssign};
 
-use super::Array;
+use super::Array1D;
 
-impl From<Array<1>> for Vec<f32> {
-    fn from(value: Array<1>) -> Self {
+impl From<Array1D> for Vec<f32> {
+    fn from(value: Array1D) -> Self {
         value.data.clone()
     }
 }
 
-impl From<Vec<f32>> for Array<1> {
+impl From<Vec<f32>> for Array1D {
     fn from(value: Vec<f32>) -> Self {
         let len = value.len();
 
-        Array {
+        Array1D {
             data: value,
-            shape: [len],
+            len: len,
         }
     }
 }
 
-impl Array<1> {
-    pub fn zeros(shape: usize) -> Self {
+impl Array1D {
+    pub fn zeros(len: usize) -> Self {
         Self {
-            data: vec![0.0; shape],
-            shape: [shape],
+            data: vec![0.0; len],
+            len: len,
         }
     }
 
@@ -36,7 +36,7 @@ impl Array<1> {
     }
 
     pub fn max(&self, other: &Self) -> Result<Self, ()> {
-        if self.shape[0] != other.shape[0] {
+        if self.len != other.len {
             return Err(());
         }
 
@@ -48,12 +48,12 @@ impl Array<1> {
 
         Ok(Self {
             data: new_data,
-            shape: self.shape.clone(),
+            len: self.len,
         })
     }
 
     pub fn min(&self, other: &Self) -> Result<Self, ()> {
-        if self.shape[0] != other.shape[0] {
+        if self.len != other.len {
             return Err(());
         }
 
@@ -65,7 +65,7 @@ impl Array<1> {
 
         Ok(Self {
             data: new_data,
-            shape: self.shape.clone(),
+            len: self.len,
         })
     }
 
@@ -78,16 +78,16 @@ impl Array<1> {
 
         Self {
             data: new_data,
-            shape: self.shape.clone(),
+            len: self.len,
         }
     }
 
     pub fn fmadd(&self, a: &Self, b: &Self) -> Result<Self, ()> {
-        if self.shape[0] != a.shape[0] {
+        if self.len != a.len {
             return Err(());
         }
 
-        if self.shape[0] != b.shape[0] {
+        if self.len != b.len {
             return Err(());
         }
 
@@ -99,16 +99,16 @@ impl Array<1> {
 
         Ok(Self {
             data: new_data,
-            shape: self.shape.clone()
+            len: self.len
         })
     }
 
     pub fn fmadd_in_place(&mut self, a: &Self, b: &Self) -> Result<(), ()> {
-        if self.shape[0] != a.shape[0] {
+        if self.len != a.len {
             return Err(());
         }
 
-        if self.shape[0] != b.shape[0] {
+        if self.len != b.len {
             return Err(());
         }
 
@@ -120,11 +120,11 @@ impl Array<1> {
     }
 }
 
-impl Add for Array<1> {
+impl Add for Array1D {
     type Output = Result<Self, ()>;
 
     fn add(self, rhs: Self) -> Self::Output {
-        if self.shape[0] != rhs.shape[0] {
+        if self.len != rhs.len {
             return Err(());
         }
 
@@ -136,15 +136,15 @@ impl Add for Array<1> {
 
         Ok(Self {
             data: new_data,
-            shape: self.shape.clone(),
+            len: self.len,
         })
     }
 }
 
 // TODO: checked and unchecked operators
-impl AddAssign for Array<1> {
+impl AddAssign for Array1D {
     fn add_assign(&mut self, rhs: Self) {
-        if self.shape[0] != rhs.shape[0] {
+        if self.len != rhs.len {
             panic!();
         }
 
@@ -154,11 +154,11 @@ impl AddAssign for Array<1> {
     }
 }
 
-impl Sub for Array<1> {
+impl Sub for Array1D {
     type Output = Result<Self, ()>;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        if self.shape[0] != rhs.shape[0] {
+        if self.len != rhs.len {
             return Err(());
         }
 
@@ -170,14 +170,14 @@ impl Sub for Array<1> {
 
         Ok(Self {
             data: new_data,
-            shape: self.shape.clone(),
+            len: self.len,
         })
     }
 }
 
-impl SubAssign for Array<1> {
+impl SubAssign for Array1D {
     fn sub_assign(&mut self, rhs: Self) {
-        if self.shape[0] != rhs.shape[0] {
+        if self.len != rhs.len {
             panic!();
         }
 
@@ -187,11 +187,11 @@ impl SubAssign for Array<1> {
     }
 }
 
-impl Mul for Array<1> {
+impl Mul for Array1D {
     type Output = Result<Self, ()>;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        if self.shape[0] != rhs.shape[0] {
+        if self.len != rhs.len {
             return Err(());
         }
 
@@ -203,14 +203,14 @@ impl Mul for Array<1> {
 
         Ok(Self {
             data: new_data,
-            shape: self.shape.clone(),
+            len: self.len,
         })
     }
 }
 
-impl MulAssign for Array<1> {
+impl MulAssign for Array1D {
     fn mul_assign(&mut self, rhs: Self) {
-        if self.shape[0] != rhs.shape[0] {
+        if self.len != rhs.len {
             panic!();
         }
 
@@ -220,11 +220,11 @@ impl MulAssign for Array<1> {
     }
 }
 
-impl Div for Array<1> {
+impl Div for Array1D {
     type Output = Result<Self, ()>;
 
     fn div(self, rhs: Self) -> Self::Output {
-        if self.shape[0] != rhs.shape[0] {
+        if self.len != rhs.len {
             return Err(());
         }
 
@@ -236,14 +236,14 @@ impl Div for Array<1> {
 
         Ok(Self {
             data: new_data,
-            shape: self.shape.clone(),
+            len: self.len,
         })
     }
 }
 
-impl DivAssign for Array<1> {
+impl DivAssign for Array1D {
     fn div_assign(&mut self, rhs: Self) {
-        if self.shape[0] != rhs.shape[0] {
+        if self.len != rhs.len {
             panic!();
         }
 

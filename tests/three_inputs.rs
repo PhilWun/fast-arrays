@@ -1,21 +1,21 @@
 mod utils;
 
-use fast_arrays::Array;
+use fast_arrays::Array1D;
 use utils::{assert_approximate, get_random_f32_vec};
 
 use rstest::rstest;
 
 #[rstest]
-#[case::fmadd(Array::<1>::fmadd_in_place, |x, y, z| y * z + x)]
-fn in_place_ref(#[case] test_function: fn(&mut Array<1>, &Array<1>, &Array<1>), #[case] target_function: fn(f32, f32, f32) -> f32) {
+#[case::fmadd(Array1D::fmadd_in_place, |x, y, z| y * z + x)]
+fn in_place_ref(#[case] test_function: fn(&mut Array1D, &Array1D, &Array1D), #[case] target_function: fn(f32, f32, f32) -> f32) {
     for i in 0..64 {
         let data1 = get_random_f32_vec(0, i);
         let data2 = get_random_f32_vec(1, i);
         let data3 = get_random_f32_vec(2, i);
 
-        let mut array1: Array<1> = data1.clone().into();
-        let array2: Array<1> = data2.clone().into();
-        let array3: Array<1> = data3.clone().into();
+        let mut array1: Array1D = data1.clone().into();
+        let array2: Array1D = data2.clone().into();
+        let array3: Array1D = data3.clone().into();
 
         test_function(&mut array1, &array2, &array3);
         let result: Vec<f32> = array1.into();
@@ -27,27 +27,27 @@ fn in_place_ref(#[case] test_function: fn(&mut Array<1>, &Array<1>, &Array<1>), 
 }
 
 #[rstest]
-#[case::fmadd(Array::<1>::fmadd_in_place)]
+#[case::fmadd(Array1D::fmadd_in_place)]
 #[should_panic]
-fn in_place_ref_shape_mismatch(#[case] test_function: fn(&mut Array<1>, &Array<1>, &Array<1>)) {
-    let mut a: Array<1> = get_random_f32_vec(0, 3).into();
-    let b: Array<1> = get_random_f32_vec(1, 4).into();
-    let c: Array<1> = get_random_f32_vec(2, 5).into();       
+fn in_place_ref_shape_mismatch(#[case] test_function: fn(&mut Array1D, &Array1D, &Array1D)) {
+    let mut a: Array1D = get_random_f32_vec(0, 3).into();
+    let b: Array1D = get_random_f32_vec(1, 4).into();
+    let c: Array1D = get_random_f32_vec(2, 5).into();       
     
     test_function(&mut a, &b, &c);
 }
 
 #[rstest]
-#[case::fmadd(Array::<1>::fmadd, |x, y, z| y * z + x)]
-fn out_of_place_ref(#[case] test_function: fn(&Array<1>, &Array<1>, &Array<1>) -> Array<1>, #[case] target_function: fn(f32, f32, f32) -> f32) {
+#[case::fmadd(Array1D::fmadd, |x, y, z| y * z + x)]
+fn out_of_place_ref(#[case] test_function: fn(&Array1D, &Array1D, &Array1D) -> Array1D, #[case] target_function: fn(f32, f32, f32) -> f32) {
     for i in 0..64 {
         let data1 = get_random_f32_vec(0, i);
         let data2 = get_random_f32_vec(1, i);
         let data3 = get_random_f32_vec(2, i);
 
-        let array1: Array<1> = data1.clone().into();
-        let array2: Array<1> = data2.clone().into();
-        let array3: Array<1> = data3.clone().into();
+        let array1: Array1D = data1.clone().into();
+        let array2: Array1D = data2.clone().into();
+        let array3: Array1D = data3.clone().into();
 
         let result: Vec<f32> = test_function(&array1, &array2, &array3).into();
 
@@ -58,12 +58,12 @@ fn out_of_place_ref(#[case] test_function: fn(&Array<1>, &Array<1>, &Array<1>) -
 }
 
 #[rstest]
-#[case::fmadd(Array::<1>::fmadd)]
+#[case::fmadd(Array1D::fmadd)]
 #[should_panic]
-fn out_of_place_ref_shape_mismatch(#[case] test_function: fn(&Array<1>, &Array<1>, &Array<1>) -> Array<1>) {
-    let a: Array<1> = get_random_f32_vec(0, 3).into();
-    let b: Array<1> = get_random_f32_vec(1, 4).into();
-    let c: Array<1> = get_random_f32_vec(2, 5).into();
+fn out_of_place_ref_shape_mismatch(#[case] test_function: fn(&Array1D, &Array1D, &Array1D) -> Array1D) {
+    let a: Array1D = get_random_f32_vec(0, 3).into();
+    let b: Array1D = get_random_f32_vec(1, 4).into();
+    let c: Array1D = get_random_f32_vec(2, 5).into();
 
     test_function(&a, &b, &c);
 }
