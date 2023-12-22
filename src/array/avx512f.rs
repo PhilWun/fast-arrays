@@ -196,6 +196,74 @@ impl Array1D {
         }
     }
 
+    pub fn add_scalar(&self, scalar: f32) -> Self {
+        let mut new_array = self.clone();
+        new_array.add_scalar_in_place(scalar);
+
+        new_array
+    }
+
+    pub fn add_scalar_in_place(&mut self, scalar: f32) {
+        let scalar = array_to_m512([scalar; 16]);
+
+        unsafe {
+            for d in self.data.iter_mut() {
+                *d = _mm512_add_ps(*d, scalar);
+            }
+        }
+    }
+
+    pub fn sub_scalar(&self, scalar: f32) -> Self {
+        let mut new_array = self.clone();
+        new_array.sub_scalar_in_place(scalar);
+
+        new_array
+    }
+
+    pub fn sub_scalar_in_place(&mut self, scalar: f32) {
+        let scalar = array_to_m512([scalar; 16]);
+
+        unsafe {
+            for d in self.data.iter_mut() {
+                *d = _mm512_sub_ps(*d, scalar);
+            }
+        }
+    }
+
+    pub fn mul_scalar(&self, scalar: f32) -> Self {
+        let mut new_array = self.clone();
+        new_array.mul_scalar_in_place(scalar);
+
+        new_array
+    }
+
+    pub fn mul_scalar_in_place(&mut self, scalar: f32) {
+        let scalar = array_to_m512([scalar; 16]);
+
+        unsafe {
+            for d in self.data.iter_mut() {
+                *d = _mm512_mul_ps(*d, scalar);
+            }
+        }
+    }
+
+    pub fn div_scalar(&self, scalar: f32) -> Self {
+        let mut new_array = self.clone();
+        new_array.div_scalar_in_place(scalar);
+
+        new_array
+    }
+
+    pub fn div_scalar_in_place(&mut self, scalar: f32) {
+        let scalar = array_to_m512([scalar; 16]);
+
+        unsafe {
+            for d in self.data.iter_mut() {
+                *d = _mm512_div_ps(*d, scalar);
+            }
+        }
+    }
+
     pub fn min(&self, other: &Self) -> Self {
         let mut new_array = self.clone();
         new_array.min_in_place(other);
