@@ -108,18 +108,10 @@ impl Array1D {
             panic!("the array shapes are not matching: {:?}, {:?}", self.len, other.len);
         }
 
-        let mut new_data = Vec::with_capacity(self.data.len());
+        let mut new_array = self.clone();
+        new_array.max_in_place(other);
 
-        unsafe {
-            for (l, r) in self.data.iter().zip(other.data.iter()) {
-                new_data.push(_mm512_max_ps(*l, *r));
-            }
-        }
-
-        Self {
-            data: new_data,
-            len: self.len
-        }
+        new_array
     }
 
     pub fn max_in_place(&mut self, other: &Self) {
@@ -139,18 +131,10 @@ impl Array1D {
             panic!("the array shapes are not matching: {:?}, {:?}", self.len, other.len);
         }
 
-        let mut new_data = Vec::with_capacity(self.data.len());
+        let mut new_array = self.clone();
+        new_array.min_in_place(other);
 
-        unsafe {
-            for (l, r) in self.data.iter().zip(other.data.iter()) {
-                new_data.push(_mm512_min_ps(*l, *r));
-            }
-        }
-
-        Self {
-            data: new_data,
-            len: self.len
-        }
+        new_array
     }
 
     pub fn min_in_place(&mut self, other: &Self) {
@@ -174,18 +158,10 @@ impl Array1D {
             panic!("the array shapes are not matching: {:?}, {:?}", self.len, b.len);
         }
 
-        let mut new_data = Vec::with_capacity(self.data.len());
+        let mut new_array = self.clone();
+        new_array.fmadd_in_place(a, b);
 
-        unsafe {
-            for ((a, b), c) in a.data.iter().zip(b.data.iter()).zip(self.data.iter()) {
-                new_data.push(_mm512_fmadd_ps(*a, *b, *c));
-            }
-        }
-
-        Self {
-            data: new_data,
-            len: self.len
-        }
+        new_array
     }
 
     pub fn fmadd_in_place(&mut self, a: &Self, b: &Self)  {
@@ -205,18 +181,10 @@ impl Array1D {
     }
 
     pub fn sqrt(&self) -> Self {
-        let mut new_data = Vec::with_capacity(self.data.len());
+        let mut new_array = self.clone();
+        new_array.sqrt_in_place();
 
-        unsafe {
-            for d in self.data.iter() {
-                new_data.push(_mm512_sqrt_ps(*d));
-            }
-        }
-
-        Self {
-            data: new_data,
-            len: self.len
-        }
+        new_array
     }
 
     pub fn sqrt_in_place(&mut self) {
@@ -228,18 +196,10 @@ impl Array1D {
     }
 
     pub fn square(&self) -> Self {
-        let mut new_data = Vec::with_capacity(self.data.len());
+        let mut new_array = self.clone();
+        new_array.square_in_place();
 
-        unsafe {
-            for d in self.data.iter() {
-                new_data.push(_mm512_mul_ps(*d, *d));
-            }
-        }
-
-        Self {
-            data: new_data,
-            len: self.len
-        }
+        new_array
     }
 
     pub fn square_in_place(&mut self) {
@@ -251,18 +211,10 @@ impl Array1D {
     }
 
     pub fn abs(&self) -> Self {
-        let mut new_data = Vec::with_capacity(self.data.len());
+        let mut new_array = self.clone();
+        new_array.abs_in_place();
 
-        unsafe {
-            for d in self.data.iter() {
-                new_data.push(_mm512_abs_ps(*d));
-            }
-        }
-
-        Self {
-            data: new_data,
-            len: self.len
-        }
+        new_array
     }
 
     pub fn abs_in_place(&mut self) {
@@ -418,18 +370,10 @@ impl Add for Array1D {
             panic!("the array shapes are not matching: {:?}, {:?}", self.len, rhs.len);
         }
 
-        let mut new_data = Vec::with_capacity(self.data.len());
+        let mut new_array = self.clone();
+        new_array += rhs;
 
-        unsafe {
-            for (l, r) in self.data.iter().zip(rhs.data.iter()) {
-                new_data.push(_mm512_add_ps(*l, *r));
-            }
-        }
-
-        Self {
-            data: new_data,
-            len: self.len.clone(),
-        }
+        new_array
     }
 }
 
@@ -455,18 +399,10 @@ impl Sub for Array1D {
             panic!("the array shapes are not matching: {:?}, {:?}", self.len, rhs.len);
         }
 
-        let mut new_data = Vec::with_capacity(self.data.len());
+        let mut new_array = self.clone();
+        new_array -= rhs;
 
-        unsafe {
-            for (l, r) in self.data.iter().zip(rhs.data.iter()) {
-                new_data.push(_mm512_sub_ps(*l, *r));
-            }
-        }
-
-        Self {
-            data: new_data,
-            len: self.len.clone(),
-        }
+        new_array
     }
 }
 
@@ -492,18 +428,10 @@ impl Mul for Array1D {
             panic!("the array shapes are not matching: {:?}, {:?}", self.len, rhs.len);
         }
 
-        let mut new_data = Vec::with_capacity(self.data.len());
+        let mut new_array = self.clone();
+        new_array *= rhs;
 
-        unsafe {
-            for (l, r) in self.data.iter().zip(rhs.data.iter()) {
-                new_data.push(_mm512_mul_ps(*l, *r));
-            }
-        }
-
-        Self {
-            data: new_data,
-            len: self.len.clone(),
-        }
+        new_array
     }
 }
 
@@ -529,18 +457,10 @@ impl Div for Array1D {
             panic!("the array shapes are not matching: {:?}, {:?}", self.len, rhs.len);
         }
 
-        let mut new_data = Vec::with_capacity(self.data.len());
+        let mut new_array = self.clone();
+        new_array /= rhs;
 
-        unsafe {
-            for (l, r) in self.data.iter().zip(rhs.data.iter()) {
-                new_data.push(_mm512_div_ps(*l, *r));
-            }
-        }
-
-        Self {
-            data: new_data,
-            len: self.len.clone(),
-        }
+        new_array
     }
 }
 
