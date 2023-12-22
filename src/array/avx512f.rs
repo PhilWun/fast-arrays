@@ -340,8 +340,30 @@ impl Array1D {
         }
     }
 
-    // TODO: add product
-    // TODO: add dot product
+    pub fn dot_product(&self, other: &Self) -> f32 {
+        assert_same_lengths2(self, other);
+
+        if self.len == 0 {
+            return 0.0;
+        }
+
+        let mut sum_register = array_to_m512([0.0; 16]);
+        let mut last_register_mask = 0xFFFF;
+
+        if self.len % 16 != 0 {
+            last_register_mask = 0xFFFF >> (16 - (self.len % 16));
+        }
+
+        unsafe {
+            for (d1, d2) in self.data[0..self.data.len() - 1].iter().zip(other.data[0..other.data.len() - 1].iter()) {
+                sum_register = _mm512_add_ps(sum_register, _mm512_mul_ps(*d1, *d2));
+            }
+
+            sum_register = _mm512_mask_add_ps(sum_register, last_register_mask, sum_register, _mm512_mul_ps(*self.data.last().unwrap(), *other.data.last().unwrap()));
+
+            _mm512_reduce_add_ps(sum_register)
+        }
+    }
 }
 
 impl Add for Array1D {
