@@ -1,5 +1,5 @@
 use std::{
-    arch::x86_64::{__m512, _mm512_add_ps, _mm512_sub_ps, _mm512_mul_ps, _mm512_div_ps, _mm512_max_ps, _mm512_min_ps, _mm512_sqrt_ps, _mm512_fmadd_ps, _mm512_abs_ps, _mm512_cmpeq_ps_mask, _mm512_cmpneq_ps_mask, _mm512_cmpnle_ps_mask, _mm512_cmpnlt_ps_mask, _mm512_cmplt_ps_mask, _mm512_cmple_ps_mask, _mm512_mul_round_ps, _MM_FROUND_TO_NEAREST_INT, _MM_FROUND_NO_EXC, _mm512_cvtps_epi32, _mm512_slli_epi32, _mm512_castsi512_ps, _mm512_add_epi32, _mm512_castps_si512, __mmask16},
+    arch::x86_64::{__m512, _mm512_add_ps, _mm512_sub_ps, _mm512_mul_ps, _mm512_div_ps, _mm512_max_ps, _mm512_min_ps, _mm512_sqrt_ps, _mm512_fmadd_ps, _mm512_abs_ps, _mm512_cmpeq_ps_mask, _mm512_cmpneq_ps_mask, _mm512_cmpnle_ps_mask, _mm512_cmpnlt_ps_mask, _mm512_cmplt_ps_mask, _mm512_cmple_ps_mask, _mm512_mul_round_ps, _MM_FROUND_TO_NEAREST_INT, _MM_FROUND_NO_EXC, _mm512_cvtps_epi32, _mm512_slli_epi32, _mm512_castsi512_ps, _mm512_add_epi32, _mm512_castps_si512, __mmask16, _mm512_mask_add_ps, _mm512_reduce_add_ps, _mm512_mask_mul_ps, _mm512_reduce_mul_ps},
     ops::{Add, Sub, Mul, Div, AddAssign, SubAssign, MulAssign, DivAssign},
     simd::f32x16
 };
@@ -294,7 +294,52 @@ impl Array1D {
         }
     }
 
-    // TODO: add sum
+    pub fn sum(&self) -> f32 {
+        if self.len == 0 {
+            return 0.0;
+        }
+
+        let mut sum_register = array_to_m512([0.0; 16]);
+        let mut last_register_mask = 0xFFFF;
+
+        if self.len % 16 != 0 {
+            last_register_mask = 0xFFFF >> (16 - (self.len % 16));
+        }
+
+        unsafe {
+            for d in self.data[0..self.data.len() - 1].iter() {
+                sum_register = _mm512_add_ps(sum_register, *d);
+            }
+
+            sum_register = _mm512_mask_add_ps(sum_register, last_register_mask, sum_register, *self.data.last().unwrap());
+
+            _mm512_reduce_add_ps(sum_register)
+        }
+    }
+
+    pub fn product(&self) -> f32 {
+        if self.len == 0 {
+            return 1.0;
+        }
+
+        let mut sum_register = array_to_m512([1.0; 16]);
+        let mut last_register_mask = 0xFFFF;
+
+        if self.len % 16 != 0 {
+            last_register_mask = 0xFFFF >> (16 - (self.len % 16));
+        }
+
+        unsafe {
+            for d in self.data[0..self.data.len() - 1].iter() {
+                sum_register = _mm512_mul_ps(sum_register, *d);
+            }
+
+            sum_register = _mm512_mask_mul_ps(sum_register, last_register_mask, sum_register, *self.data.last().unwrap());
+
+            _mm512_reduce_mul_ps(sum_register)
+        }
+    }
+
     // TODO: add product
     // TODO: add dot product
 }

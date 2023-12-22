@@ -19,5 +19,9 @@ pub fn assert_approximate(a: f32, b: f32) {
         return;
     }
 
-    assert!((a - b).abs() < 0.001, "difference too big between {} and {}", a, b);
+    if a == 0.0 || b == 0.0 {
+        assert!((a - b).abs() < 0.001, "difference too big between {} and {}", a, b);
+    } else {
+        assert!((1.0 - (a / b)).abs() < 0.001, "difference too big between {} and {}", a, b);
+    }
 }
