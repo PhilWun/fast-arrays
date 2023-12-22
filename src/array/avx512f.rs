@@ -1,6 +1,5 @@
 use std::{
     arch::x86_64::{__m512, _mm512_add_ps, _mm512_sub_ps, _mm512_mul_ps, _mm512_div_ps, _mm512_max_ps, _mm512_min_ps, _mm512_sqrt_ps, _mm512_fmadd_ps, _mm512_abs_ps, _mm512_cmpeq_ps_mask, _mm512_cmpneq_ps_mask, _mm512_cmpnle_ps_mask, _mm512_cmpnlt_ps_mask, _mm512_cmplt_ps_mask, _mm512_cmple_ps_mask, _mm512_mul_round_ps, _MM_FROUND_TO_NEAREST_INT, _MM_FROUND_NO_EXC, _mm512_cvtps_epi32, _mm512_slli_epi32, _mm512_castsi512_ps, _mm512_add_epi32, _mm512_castps_si512, __mmask16, _mm512_mask_add_ps, _mm512_reduce_add_ps, _mm512_mask_mul_ps, _mm512_reduce_mul_ps},
-    ops::{Add, Sub, Mul, Div, AddAssign, SubAssign, MulAssign, DivAssign},
     simd::f32x16
 };
 
@@ -110,6 +109,74 @@ impl Array1D {
         new_register[value_index] = value;
 
         self.data[register_index] = array_to_m512(new_register);
+    }
+
+    pub fn add(&self, other: &Self) -> Self {
+        let mut new_array = self.clone();
+        new_array.add_in_place(other);
+
+        new_array
+    }
+
+    pub fn add_in_place(&mut self, other: &Self) {
+        assert_same_lengths2(&self, &other);
+
+        unsafe {
+            for (l, r) in self.data.iter_mut().zip(other.data.iter()) {
+                *l = _mm512_add_ps(*l, *r);
+            }
+        }
+    }
+
+    pub fn sub(&self, other: &Self) -> Self {
+        let mut new_array = self.clone();
+        new_array.sub_in_place(other);
+
+        new_array
+    }
+
+    pub fn sub_in_place(&mut self, other: &Self) {
+        assert_same_lengths2(&self, &other);
+
+        unsafe {
+            for (l, r) in self.data.iter_mut().zip(other.data.iter()) {
+                *l = _mm512_sub_ps(*l, *r);
+            }
+        }
+    }
+
+    pub fn mul(&self, other: &Self) -> Self {
+        let mut new_array = self.clone();
+        new_array.mul_in_place(other);
+
+        new_array
+    }
+
+    pub fn mul_in_place(&mut self, other: &Self) {
+        assert_same_lengths2(&self, &other);
+
+        unsafe {
+            for (l, r) in self.data.iter_mut().zip(other.data.iter()) {
+                *l = _mm512_mul_ps(*l, *r);
+            }
+        }
+    }
+
+    pub fn div(&self, other: &Self) -> Self {
+        let mut new_array = self.clone();
+        new_array.div_in_place(other);
+
+        new_array
+    }
+
+    pub fn div_in_place(&mut self, other: &Self) {
+        assert_same_lengths2(&self, &other);
+
+        unsafe {
+            for (l, r) in self.data.iter_mut().zip(other.data.iter()) {
+                *l = _mm512_div_ps(*l, *r);
+            }
+        }
     }
 
     pub fn max(&self, other: &Self) -> Self {
@@ -362,98 +429,6 @@ impl Array1D {
             sum_register = _mm512_mask_add_ps(sum_register, last_register_mask, sum_register, _mm512_mul_ps(*self.data.last().unwrap(), *other.data.last().unwrap()));
 
             _mm512_reduce_add_ps(sum_register)
-        }
-    }
-}
-
-impl Add for Array1D {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        let mut new_array = self.clone();
-        new_array += rhs;
-
-        new_array
-    }
-}
-
-impl AddAssign for Array1D {
-    fn add_assign(&mut self, rhs: Self) {
-        assert_same_lengths2(&self, &rhs);
-
-        unsafe {
-            for (l, r) in self.data.iter_mut().zip(rhs.data.iter()) {
-                *l = _mm512_add_ps(*l, *r);
-            }
-        }
-    }
-}
-
-impl Sub for Array1D {
-    type Output = Self;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        let mut new_array = self.clone();
-        new_array -= rhs;
-
-        new_array
-    }
-}
-
-impl SubAssign for Array1D {
-    fn sub_assign(&mut self, rhs: Self) {
-        assert_same_lengths2(&self, &rhs);
-
-        unsafe {
-            for (l, r) in self.data.iter_mut().zip(rhs.data.iter()) {
-                *l = _mm512_sub_ps(*l, *r);
-            }
-        }
-    }
-}
-
-impl Mul for Array1D {
-    type Output = Self;
-
-    fn mul(self, rhs: Self) -> Self::Output {
-        let mut new_array = self.clone();
-        new_array *= rhs;
-
-        new_array
-    }
-}
-
-impl MulAssign for Array1D {
-    fn mul_assign(&mut self, rhs: Self) {
-        assert_same_lengths2(&self, &rhs);
-
-        unsafe {
-            for (l, r) in self.data.iter_mut().zip(rhs.data.iter()) {
-                *l = _mm512_mul_ps(*l, *r);
-            }
-        }
-    }
-}
-
-impl Div for Array1D {
-    type Output = Self;
-
-    fn div(self, rhs: Self) -> Self::Output {
-        let mut new_array = self.clone();
-        new_array /= rhs;
-
-        new_array
-    }
-}
-
-impl DivAssign for Array1D {
-    fn div_assign(&mut self, rhs: Self) {
-        assert_same_lengths2(&self, &rhs);
-
-        unsafe {
-            for (l, r) in self.data.iter_mut().zip(rhs.data.iter()) {
-                *l = _mm512_div_ps(*l, *r);
-            }
         }
     }
 }
