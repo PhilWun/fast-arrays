@@ -1,5 +1,5 @@
 use std::{
-    arch::x86_64::{__m512, _mm512_add_ps, _mm512_sub_ps, _mm512_mul_ps, _mm512_div_ps, _mm512_max_ps, _mm512_min_ps, _mm512_sqrt_ps, _mm512_fmadd_ps, _mm512_abs_ps, _mm512_cmpeq_ps_mask, _mm512_cmpneq_ps_mask, _mm512_cmpnle_ps_mask, _mm512_cmpnlt_ps_mask, _mm512_cmplt_ps_mask, _mm512_cmple_ps_mask, _mm512_mul_round_ps, _MM_FROUND_TO_NEAREST_INT, _MM_FROUND_NO_EXC, _mm512_cvtps_epi32, _mm512_slli_epi32, _mm512_castsi512_ps, _mm512_add_epi32, _mm512_castps_si512},
+    arch::x86_64::{__m512, _mm512_add_ps, _mm512_sub_ps, _mm512_mul_ps, _mm512_div_ps, _mm512_max_ps, _mm512_min_ps, _mm512_sqrt_ps, _mm512_fmadd_ps, _mm512_abs_ps, _mm512_cmpeq_ps_mask, _mm512_cmpneq_ps_mask, _mm512_cmpnle_ps_mask, _mm512_cmpnlt_ps_mask, _mm512_cmplt_ps_mask, _mm512_cmple_ps_mask, _mm512_mul_round_ps, _MM_FROUND_TO_NEAREST_INT, _MM_FROUND_NO_EXC, _mm512_cvtps_epi32, _mm512_slli_epi32, _mm512_castsi512_ps, _mm512_add_epi32, _mm512_castps_si512, __mmask16},
     ops::{Add, Sub, Mul, Div, AddAssign, SubAssign, MulAssign, DivAssign},
     simd::f32x16
 };
@@ -14,6 +14,15 @@ fn m512_to_array(value: __m512) -> [f32; 16] {
 fn array_to_m512(value: [f32; 16]) -> __m512 {
     let value: f32x16 = value.into();
     value.into()
+}
+
+fn assert_same_lengths2(a: &Array1D, b: &Array1D) {
+    assert_eq!(a.len, b.len, "the lengths of array one and two don't match: {} != {}", a.len, b.len);
+}
+
+fn assert_same_lengths3(a: &Array1D, b: &Array1D, c: &Array1D) {
+    assert_eq!(a.len, b.len, "the lengths of array one and two don't match: {} != {}", a.len, b.len);
+    assert_eq!(b.len, c.len, "the lengths of array two and three don't match: {} != {}", b.len, c.len);
 }
 
 impl From<Array1D> for Vec<f32> {
@@ -104,10 +113,6 @@ impl Array1D {
     }
 
     pub fn max(&self, other: &Self) -> Self {
-        if self.len != other.len {
-            panic!("the array shapes are not matching: {:?}, {:?}", self.len, other.len);
-        }
-
         let mut new_array = self.clone();
         new_array.max_in_place(other);
 
@@ -115,9 +120,7 @@ impl Array1D {
     }
 
     pub fn max_in_place(&mut self, other: &Self) {
-        if self.len != other.len {
-            panic!("the array shapes are not matching: {:?}, {:?}", self.len, other.len);
-        }
+        assert_same_lengths2(self, other);
 
         unsafe {
             for (l, r) in self.data.iter_mut().zip(other.data.iter()) {
@@ -127,10 +130,6 @@ impl Array1D {
     }
 
     pub fn min(&self, other: &Self) -> Self {
-        if self.len != other.len {
-            panic!("the array shapes are not matching: {:?}, {:?}", self.len, other.len);
-        }
-
         let mut new_array = self.clone();
         new_array.min_in_place(other);
 
@@ -138,9 +137,7 @@ impl Array1D {
     }
 
     pub fn min_in_place(&mut self, other: &Self) {
-        if self.len != other.len {
-            panic!("the array shapes are not matching: {:?}, {:?}", self.len, other.len);
-        }
+        assert_same_lengths2(self, other);
 
         unsafe {
             for (l, r) in self.data.iter_mut().zip(other.data.iter()) {
@@ -150,14 +147,6 @@ impl Array1D {
     }
 
     pub fn fmadd(&self, a: &Self, b: &Self) -> Self {
-        if self.len != a.len {
-            panic!("the array shapes are not matching: {:?}, {:?}", self.len, a.len);
-        }
-
-        if self.len != b.len {
-            panic!("the array shapes are not matching: {:?}, {:?}", self.len, b.len);
-        }
-
         let mut new_array = self.clone();
         new_array.fmadd_in_place(a, b);
 
@@ -165,13 +154,7 @@ impl Array1D {
     }
 
     pub fn fmadd_in_place(&mut self, a: &Self, b: &Self)  {
-        if self.len != a.len {
-            panic!("the array shapes are not matching: {:?}, {:?}", self.len, a.len);
-        }
-
-        if self.len != b.len {
-            panic!("the array shapes are not matching: {:?}, {:?}", self.len, b.len);
-        }
+        assert_same_lengths3(self, a, b);
 
         unsafe {
             for ((a, b), c) in a.data.iter().zip(b.data.iter()).zip(self.data.iter_mut()) {
@@ -225,94 +208,44 @@ impl Array1D {
         }
     }
 
-    pub fn compare_equal(&self, other: &Self) -> Mask1D {
-        let mut masks = Vec::with_capacity(self.data.len());
+    fn compare(a: &Array1D, b: &Array1D, func: unsafe fn(__m512, __m512) -> __mmask16) -> Mask1D {
+        assert_same_lengths2(a, b);
+        let mut masks = Vec::with_capacity(a.data.len());
 
         unsafe {
-            for (d1, d2) in self.data.iter().zip(other.data.iter()) {
-                masks.push(_mm512_cmpeq_ps_mask(*d1, *d2));
+            for (d1, d2) in a.data.iter().zip(b.data.iter()) {
+                masks.push(func(*d1, *d2));
             }
         }
 
         Mask1D {
             masks,
-            len: self.len
+            len: a.len
         }
+    }
+
+    pub fn compare_equal(&self, other: &Self) -> Mask1D {
+        Self::compare(self, other, _mm512_cmpeq_ps_mask)
     }
 
     pub fn compare_not_equal(&self, other: &Self) -> Mask1D {
-        let mut masks = Vec::with_capacity(self.data.len());
-
-        unsafe {
-            for (d1, d2) in self.data.iter().zip(other.data.iter()) {
-                masks.push(_mm512_cmpneq_ps_mask(*d1, *d2));
-            }
-        }
-
-        Mask1D {
-            masks,
-            len: self.len
-        }
+        Self::compare(self, other, _mm512_cmpneq_ps_mask)
     }
 
     pub fn compare_greater_than(&self, other: &Self) -> Mask1D {
-        let mut masks = Vec::with_capacity(self.data.len());
-
-        unsafe {
-            for (d1, d2) in self.data.iter().zip(other.data.iter()) {
-                masks.push(_mm512_cmpnle_ps_mask(*d1, *d2));
-            }
-        }
-
-        Mask1D {
-            masks,
-            len: self.len
-        }
+        Self::compare(self, other, _mm512_cmpnle_ps_mask)
     }
 
     pub fn compare_greater_than_or_equal(&self, other: &Self) -> Mask1D {
-        let mut masks = Vec::with_capacity(self.data.len());
-
-        unsafe {
-            for (d1, d2) in self.data.iter().zip(other.data.iter()) {
-                masks.push(_mm512_cmpnlt_ps_mask(*d1, *d2));
-            }
-        }
-
-        Mask1D {
-            masks,
-            len: self.len
-        }
+        Self::compare(self, other, _mm512_cmpnlt_ps_mask)
     }
 
     pub fn compare_less_than(&self, other: &Self) -> Mask1D {
-        let mut masks = Vec::with_capacity(self.data.len());
-
-        unsafe {
-            for (d1, d2) in self.data.iter().zip(other.data.iter()) {
-                masks.push(_mm512_cmplt_ps_mask(*d1, *d2));
-            }
-        }
-
-        Mask1D {
-            masks,
-            len: self.len
-        }
+        Self::compare(self, other, _mm512_cmplt_ps_mask)
     }
 
     pub fn compare_less_than_or_equal(&self, other: &Self) -> Mask1D {
-        let mut masks = Vec::with_capacity(self.data.len());
-
-        unsafe {
-            for (d1, d2) in self.data.iter().zip(other.data.iter()) {
-                masks.push(_mm512_cmple_ps_mask(*d1, *d2));
-            }
-        }
-
-        Mask1D {
-            masks,
-            len: self.len
-        }
+        Self::compare(self, other, _mm512_cmple_ps_mask)
     }
     
     pub fn exp(&self) -> Array1D {
@@ -339,7 +272,7 @@ impl Array1D {
             for x in self.data.iter_mut() {
                 // exp(x) = 2^i * e^f; i = rint (log2(e) * x), f = x - log(2) * i
                 let t = _mm512_mul_ps(*x, l2e);
-                let mut r = _mm512_mul_round_ps(*x, l2e, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+                let mut r = _mm512_mul_round_ps(*x, l2e, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC); // r = rint (t)
                 let mut f = _mm512_fmadd_ps(r, l2h, *x); // x - log(2)_hi * r
                 f = _mm512_fmadd_ps(r, l2l, f); // f = x - log(2)_hi * r - log(2)_lo * r
 
@@ -360,16 +293,16 @@ impl Array1D {
             }
         }
     }
+
+    // TODO: add sum
+    // TODO: add product
+    // TODO: add dot product
 }
 
 impl Add for Array1D {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
-        if self.len != rhs.len {
-            panic!("the array shapes are not matching: {:?}, {:?}", self.len, rhs.len);
-        }
-
         let mut new_array = self.clone();
         new_array += rhs;
 
@@ -379,9 +312,7 @@ impl Add for Array1D {
 
 impl AddAssign for Array1D {
     fn add_assign(&mut self, rhs: Self) {
-        if self.len != rhs.len {
-            panic!("the array shapes are not matching: {:?}, {:?}", self.len, rhs.len);
-        }
+        assert_same_lengths2(&self, &rhs);
 
         unsafe {
             for (l, r) in self.data.iter_mut().zip(rhs.data.iter()) {
@@ -395,10 +326,6 @@ impl Sub for Array1D {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        if self.len != rhs.len {
-            panic!("the array shapes are not matching: {:?}, {:?}", self.len, rhs.len);
-        }
-
         let mut new_array = self.clone();
         new_array -= rhs;
 
@@ -408,9 +335,7 @@ impl Sub for Array1D {
 
 impl SubAssign for Array1D {
     fn sub_assign(&mut self, rhs: Self) {
-        if self.len != rhs.len {
-            panic!("the array shapes are not matching: {:?}, {:?}", self.len, rhs.len);
-        }
+        assert_same_lengths2(&self, &rhs);
 
         unsafe {
             for (l, r) in self.data.iter_mut().zip(rhs.data.iter()) {
@@ -424,10 +349,6 @@ impl Mul for Array1D {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        if self.len != rhs.len {
-            panic!("the array shapes are not matching: {:?}, {:?}", self.len, rhs.len);
-        }
-
         let mut new_array = self.clone();
         new_array *= rhs;
 
@@ -437,9 +358,7 @@ impl Mul for Array1D {
 
 impl MulAssign for Array1D {
     fn mul_assign(&mut self, rhs: Self) {
-        if self.len != rhs.len {
-            panic!("the array shapes are not matching: {:?}, {:?}", self.len, rhs.len);
-        }
+        assert_same_lengths2(&self, &rhs);
 
         unsafe {
             for (l, r) in self.data.iter_mut().zip(rhs.data.iter()) {
@@ -453,10 +372,6 @@ impl Div for Array1D {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self::Output {
-        if self.len != rhs.len {
-            panic!("the array shapes are not matching: {:?}, {:?}", self.len, rhs.len);
-        }
-
         let mut new_array = self.clone();
         new_array /= rhs;
 
@@ -466,9 +381,7 @@ impl Div for Array1D {
 
 impl DivAssign for Array1D {
     fn div_assign(&mut self, rhs: Self) {
-        if self.len != rhs.len {
-            panic!("the array shapes are not matching: {:?}, {:?}", self.len, rhs.len);
-        }
+        assert_same_lengths2(&self, &rhs);
 
         unsafe {
             for (l, r) in self.data.iter_mut().zip(rhs.data.iter()) {

@@ -22,5 +22,7 @@ pub struct Array1D {
 pub struct Mask1D {
     #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
     masks: Vec<__mmask16>,
+    #[cfg(not(all(target_arch = "x86_64", target_feature = "avx512f")))]
+    data: Vec<bool>,
     len: usize,
 }

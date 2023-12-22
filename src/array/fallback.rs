@@ -1,6 +1,6 @@
 use std::ops::{Add, Sub, Mul, Div, AddAssign, SubAssign, MulAssign, DivAssign};
 
-use super::Array1D;
+use crate::Array1D;
 
 impl From<Array1D> for Vec<f32> {
     fn from(value: Array1D) -> Self {
