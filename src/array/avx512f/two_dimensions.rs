@@ -1,6 +1,8 @@
+use std::arch::x86_64::{_mm512_add_ps, _mm512_mask_add_ps, _mm512_mul_ps, _mm512_mask_mul_ps, _mm512_reduce_add_ps, _mm512_reduce_mul_ps};
+
 use crate::Array;
 
-use super::{m512_to_array, array_to_m512};
+use super::{m512_to_array, array_to_m512, reduce};
 
 impl From<Array<2>> for Vec<f32> {
     fn from(value: Array<2>) -> Self {
@@ -60,6 +62,54 @@ impl Array<2> {
         Self {
             data: new_data,
             shape
+        }
+    }
+
+    pub fn sum(&self) -> f32 {
+        assert!(self.shape[0] > 0);
+        assert!(self.shape[1] > 0);
+
+        let row_count = self.shape[0];
+        let column_count = self.shape[1];
+        let registers_per_row = column_count.div_ceil(16);
+
+        unsafe {
+            let mut sum_register = array_to_m512([0.0; 16]);
+
+            for i in 0..row_count {
+                let start = i * registers_per_row;
+                let end = start + registers_per_row;
+
+                let intermediate_result = reduce(&self.data[start..end], column_count, 0.0, _mm512_add_ps, _mm512_mask_add_ps);
+
+                sum_register = _mm512_add_ps(sum_register, intermediate_result);
+            }
+            
+            _mm512_reduce_add_ps(sum_register)
+        }
+    }
+
+    pub fn product(&self) -> f32 {
+        assert!(self.shape[0] > 0);
+        assert!(self.shape[1] > 0);
+
+        let row_count = self.shape[0];
+        let column_count = self.shape[1];
+        let registers_per_row = column_count.div_ceil(16);
+
+        unsafe {
+            let mut product_register = array_to_m512([1.0; 16]);
+
+            for i in 0..row_count {
+                let start = i * registers_per_row;
+                let end = start + registers_per_row;
+
+                let intermediate_result = reduce(&self.data[start..end], column_count, 1.0, _mm512_mul_ps, _mm512_mask_mul_ps);
+
+                product_register = _mm512_mul_ps(product_register, intermediate_result);
+            }
+            
+            _mm512_reduce_mul_ps(product_register)
         }
     }
 }

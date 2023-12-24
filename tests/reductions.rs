@@ -6,9 +6,9 @@ use utils::{assert_approximate, get_random_f32_vec};
 use rstest::rstest;
 
 #[rstest]
-#[case::sum(Array::sum, sum)]
-#[case::product(Array::product, product)]
-fn reduction_one_input(#[case] test_function: fn(&Array<1>) -> f32, #[case] target_function: fn(&Vec<f32>) -> f32) {
+#[case::sum(Array::<1>::sum, sum)]
+#[case::product(Array::<1>::product, product)]
+fn reduction1d_one_input(#[case] test_function: fn(&Array<1>) -> f32, #[case] target_function: fn(&Vec<f32>) -> f32) {
     for i in 0..64 {
         let data = get_random_f32_vec(0, i);
         let array: Array<1> = data.clone().into();
@@ -17,6 +17,23 @@ fn reduction_one_input(#[case] test_function: fn(&Array<1>) -> f32, #[case] targ
         let target = target_function(&data);
 
         assert_approximate(result, target);
+    }
+}
+
+#[rstest]
+#[case::sum(Array::<2>::sum, sum)]
+#[case::product(Array::<2>::product, product)]
+fn reduction2d_one_input(#[case] test_function: fn(&Array<2>) -> f32, #[case] target_function: fn(&Vec<f32>) -> f32) {
+    for i in 1..32 {
+        for j in 1..32 {
+            let data = get_random_f32_vec(0, i * j);
+            let array: Array<2> = Array::<2>::from_vec(&data, [i, j]);
+
+            let result = test_function(&array);
+            let target = target_function(&data);
+
+            assert_approximate(result, target);
+        }
     }
 }
 

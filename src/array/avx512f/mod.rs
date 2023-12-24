@@ -27,6 +27,25 @@ fn assert_same_shape3<const D: usize>(a: &Array<D>, b: &Array<D>, c: &Array<D>) 
     assert_eq!(b.shape, c.shape, "the lengths of array two and three don't match: {:?} != {:?}", b.shape, c.shape);
 }
 
+unsafe fn reduce(data: &[__m512], len: usize, default_value: f32, func: unsafe fn(__m512, __m512) -> __m512, mask_func: unsafe fn(__m512, __mmask16, __m512, __m512) -> __m512) -> __m512 {
+    let mut result_register = array_to_m512([default_value; 16]);
+    let mut last_register_mask = 0xFFFF;
+
+    if len % 16 != 0 {
+        last_register_mask = 0xFFFF >> (16 - (len % 16));
+    }
+
+    unsafe {
+        for d in data[0..data.len() - 1].iter() {
+            result_register = func(result_register, *d);
+        }
+
+        result_register = mask_func(result_register, last_register_mask, result_register, *data.last().unwrap());
+    }
+
+    result_register
+}
+
 impl<const D: usize> Array<D> {
     pub fn add(&self, other: &Self) -> Self {
         let mut new_array = self.clone();

@@ -19,6 +19,10 @@ pub fn assert_approximate(a: f32, b: f32) {
         return;
     }
 
+    if a.is_infinite() && b.is_infinite() {
+        return;
+    }
+
     if a == 0.0 || b == 0.0 {
         assert!((a - b).abs() < 0.001, "difference too big between {} and {}", a, b);
     } else {

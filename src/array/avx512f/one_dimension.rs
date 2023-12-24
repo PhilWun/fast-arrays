@@ -2,7 +2,7 @@ use std::arch::x86_64::{__m512, _mm512_add_ps, _mm512_mask_add_ps, _mm512_reduce
 
 use crate::Array;
 
-use super::{m512_to_array, array_to_m512, assert_same_shape2};
+use super::{m512_to_array, array_to_m512, assert_same_shape2, reduce};
 
 impl From<Array<1>> for Vec<f32> {
     fn from(value: Array<1>) -> Self {
@@ -96,20 +96,8 @@ impl Array<1> {
             return 0.0;
         }
 
-        let mut sum_register = array_to_m512([0.0; 16]);
-        let mut last_register_mask = 0xFFFF;
-
-        if self.shape[0] % 16 != 0 {
-            last_register_mask = 0xFFFF >> (16 - (self.shape[0] % 16));
-        }
-
         unsafe {
-            for d in self.data[0..self.data.len() - 1].iter() {
-                sum_register = _mm512_add_ps(sum_register, *d);
-            }
-
-            sum_register = _mm512_mask_add_ps(sum_register, last_register_mask, sum_register, *self.data.last().unwrap());
-
+            let sum_register = reduce(&self.data, self.shape[0], 0.0, _mm512_add_ps, _mm512_mask_add_ps);
             _mm512_reduce_add_ps(sum_register)
         }
     }
@@ -119,20 +107,8 @@ impl Array<1> {
             return 1.0;
         }
 
-        let mut sum_register = array_to_m512([1.0; 16]);
-        let mut last_register_mask = 0xFFFF;
-
-        if self.shape[0] % 16 != 0 {
-            last_register_mask = 0xFFFF >> (16 - (self.shape[0] % 16));
-        }
-
         unsafe {
-            for d in self.data[0..self.data.len() - 1].iter() {
-                sum_register = _mm512_mul_ps(sum_register, *d);
-            }
-
-            sum_register = _mm512_mask_mul_ps(sum_register, last_register_mask, sum_register, *self.data.last().unwrap());
-
+            let sum_register = reduce(&self.data, self.shape[0], 1.0, _mm512_mul_ps, _mm512_mask_mul_ps);
             _mm512_reduce_mul_ps(sum_register)
         }
     }
