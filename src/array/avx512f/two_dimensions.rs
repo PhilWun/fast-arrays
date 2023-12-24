@@ -37,7 +37,7 @@ impl Array<2> {
         let mut new_data = Vec::with_capacity(registers_per_row * row_count);
         let mut index = 0;
 
-        for r in 0..row_count {
+        for _ in 0..row_count {
             for c in 0..registers_per_row {
                 let mut register = [0.0f32; 16];
 
