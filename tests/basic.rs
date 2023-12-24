@@ -1,13 +1,13 @@
 mod utils;
 
-use fast_arrays::Array1D;
+use fast_arrays::Array;
 use utils::get_random_f32_vec;
 
 #[test]
 fn conversion() {
     for i in 0..64 {
         let data = get_random_f32_vec(0, i);
-        let converted: Array1D = data.clone().into();
+        let converted: Array<1> = data.clone().into();
         let converted_back: Vec<f32> = converted.into();
 
         assert_eq!(converted_back, data);
@@ -17,7 +17,7 @@ fn conversion() {
 #[test]
 fn zeros() {
     for i in 0..64 {
-        let zeros: Vec<f32> = Array1D::zeros(i).into();
+        let zeros: Vec<f32> = Array::zeros(i).into();
 
         assert_eq!(zeros, vec![0.0; i]);
     }
@@ -26,7 +26,7 @@ fn zeros() {
 #[test]
 fn get() {
     let data = get_random_f32_vec(0, 64);
-    let array: Array1D = data.clone().into();
+    let array: Array<1> = data.clone().into();
 
     for i in 0..64 {
         assert_eq!(array.get(i), *data.get(i).unwrap());
@@ -37,7 +37,7 @@ fn get() {
 #[should_panic]
 fn get_out_of_bounds() {
     let data = get_random_f32_vec(0, 64);
-    let array: Array1D = data.into();
+    let array: Array<1> = data.into();
 
     array.get(64);
 }
@@ -45,7 +45,7 @@ fn get_out_of_bounds() {
 #[test]
 fn set() {
     let data = get_random_f32_vec(0, 64);
-    let mut array: Array1D = data.clone().into();
+    let mut array: Array<1> = data.clone().into();
 
     for i in 0..64 {
         array.set(i, (i + 10) as f32);
@@ -57,6 +57,6 @@ fn set() {
 #[should_panic]
 fn set_out_of_bounds() {
     let data = get_random_f32_vec(0, 64);
-    let mut array: Array1D = data.into();
+    let mut array: Array<1> = data.into();
     array.set(64, 42.0);
 }

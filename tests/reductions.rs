@@ -1,17 +1,17 @@
 mod utils;
 
-use fast_arrays::Array1D;
+use fast_arrays::Array;
 use utils::{assert_approximate, get_random_f32_vec};
 
 use rstest::rstest;
 
 #[rstest]
-#[case::sum(Array1D::sum, sum)]
-#[case::product(Array1D::product, product)]
-fn reduction_one_input(#[case] test_function: fn(&Array1D) -> f32, #[case] target_function: fn(&Vec<f32>) -> f32) {
+#[case::sum(Array::sum, sum)]
+#[case::product(Array::product, product)]
+fn reduction_one_input(#[case] test_function: fn(&Array<1>) -> f32, #[case] target_function: fn(&Vec<f32>) -> f32) {
     for i in 0..64 {
         let data = get_random_f32_vec(0, i);
-        let array: Array1D = data.clone().into();
+        let array: Array<1> = data.clone().into();
 
         let result = test_function(&array);
         let target = target_function(&data);
@@ -21,13 +21,13 @@ fn reduction_one_input(#[case] test_function: fn(&Array1D) -> f32, #[case] targe
 }
 
 #[rstest]
-#[case::dot_product(Array1D::dot_product, dot_product)]
-fn reduction_two_inputs(#[case] test_function: fn(&Array1D, &Array1D) -> f32, #[case] target_function: fn(&Vec<f32>, &Vec<f32>) -> f32) {
+#[case::dot_product(Array::dot_product, dot_product)]
+fn reduction_two_inputs(#[case] test_function: fn(&Array<1>, &Array<1>) -> f32, #[case] target_function: fn(&Vec<f32>, &Vec<f32>) -> f32) {
     for i in 0..64 {
         let data1 = get_random_f32_vec(0, i);
         let data2 = get_random_f32_vec(1, i);
-        let array1: Array1D = data1.clone().into();
-        let array2: Array1D = data2.clone().into();
+        let array1: Array<1> = data1.clone().into();
+        let array2: Array<1> = data2.clone().into();
 
         let result = test_function(&array1, &array2);
         let target = target_function(&data1, &data2);

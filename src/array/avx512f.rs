@@ -3,7 +3,7 @@ use std::{
     simd::f32x16
 };
 
-use crate::{Array1D, Mask1D};
+use crate::{Array, Mask};
 
 fn m512_to_array(value: __m512) -> [f32; 16] {
     let value: f32x16 = value.into();
@@ -15,25 +15,25 @@ fn array_to_m512(value: [f32; 16]) -> __m512 {
     value.into()
 }
 
-fn assert_same_lengths2(a: &Array1D, b: &Array1D) {
-    assert_eq!(a.len, b.len, "the lengths of array one and two don't match: {} != {}", a.len, b.len);
+fn assert_same_shape2<const D: usize>(a: &Array<D>, b: &Array<D>) {
+    assert_eq!(a.shape, b.shape, "the lengths of array one and two don't match: {:?} != {:?}", a.shape, b.shape);
 }
 
-fn assert_same_lengths3(a: &Array1D, b: &Array1D, c: &Array1D) {
-    assert_eq!(a.len, b.len, "the lengths of array one and two don't match: {} != {}", a.len, b.len);
-    assert_eq!(b.len, c.len, "the lengths of array two and three don't match: {} != {}", b.len, c.len);
+fn assert_same_shape3<const D: usize>(a: &Array<D>, b: &Array<D>, c: &Array<D>) {
+    assert_eq!(a.shape, b.shape, "the lengths of array one and two don't match: {:?} != {:?}", a.shape, b.shape);
+    assert_eq!(b.shape, c.shape, "the lengths of array two and three don't match: {:?} != {:?}", b.shape, c.shape);
 }
 
-impl From<Array1D> for Vec<f32> {
-    fn from(value: Array1D) -> Self {
-        let mut converted = vec![0f32; value.len];
+impl From<Array<1>> for Vec<f32> {
+    fn from(value: Array<1>) -> Self {
+        let mut converted = vec![0f32; value.shape[0]];
         let mut index: usize = 0;
 
         for register in value.data {
             let register = m512_to_array(register);
 
             for i in 0..16 {
-                if index >= value.len {
+                if index >= value.shape[0] {
                     break;
                 }
 
@@ -46,7 +46,7 @@ impl From<Array1D> for Vec<f32> {
     }
 }
 
-impl From<Vec<f32>> for Array1D {
+impl From<Vec<f32>> for Array<1> {
     fn from(value: Vec<f32>) -> Self {
         let register_count = value.len().div_ceil(16);
         let mut data: Vec<__m512> = Vec::with_capacity(register_count);
@@ -65,14 +65,14 @@ impl From<Vec<f32>> for Array1D {
             data.push(array_to_m512(new_register_data));
         }
 
-        Array1D {
+        Array {
             data: data,
-            len: value.len(),
+            shape: [value.len()],
         }
     }
 }
 
-impl Array1D {
+impl Array<1> {
     pub fn zeros(len: usize) -> Self {
         let register_count = len.div_ceil(16);
         let zero = array_to_m512([0f32; 16]);
@@ -80,13 +80,13 @@ impl Array1D {
 
         Self {
             data,
-            len,
+            shape: [len],
         }
     }
 
     pub fn get(&self, index: usize) -> f32 {
-        if index >= self.len {
-            panic!("tried to get index {}, but the array has only {} element(s)", index, self.len);
+        if index >= self.shape[0] {
+            panic!("tried to get index {}, but the array has only {} element(s)", index, self.shape[0]);
         }
 
         let register_index = index / 16;
@@ -98,8 +98,8 @@ impl Array1D {
     }
 
     pub fn set(&mut self, index: usize, value: f32) {
-        if index >= self.len {
-            panic!("tried to set index {}, but the array has only {} element(s)", index, self.len);
+        if index >= self.shape[0] {
+            panic!("tried to set index {}, but the array has only {} element(s)", index, self.shape[0]);
         }
 
         let register_index = index / 16;
@@ -111,6 +111,79 @@ impl Array1D {
         self.data[register_index] = array_to_m512(new_register);
     }
 
+    pub fn sum(&self) -> f32 {
+        if self.shape[0] == 0 {
+            return 0.0;
+        }
+
+        let mut sum_register = array_to_m512([0.0; 16]);
+        let mut last_register_mask = 0xFFFF;
+
+        if self.shape[0] % 16 != 0 {
+            last_register_mask = 0xFFFF >> (16 - (self.shape[0] % 16));
+        }
+
+        unsafe {
+            for d in self.data[0..self.data.len() - 1].iter() {
+                sum_register = _mm512_add_ps(sum_register, *d);
+            }
+
+            sum_register = _mm512_mask_add_ps(sum_register, last_register_mask, sum_register, *self.data.last().unwrap());
+
+            _mm512_reduce_add_ps(sum_register)
+        }
+    }
+
+    pub fn product(&self) -> f32 {
+        if self.shape[0] == 0 {
+            return 1.0;
+        }
+
+        let mut sum_register = array_to_m512([1.0; 16]);
+        let mut last_register_mask = 0xFFFF;
+
+        if self.shape[0] % 16 != 0 {
+            last_register_mask = 0xFFFF >> (16 - (self.shape[0] % 16));
+        }
+
+        unsafe {
+            for d in self.data[0..self.data.len() - 1].iter() {
+                sum_register = _mm512_mul_ps(sum_register, *d);
+            }
+
+            sum_register = _mm512_mask_mul_ps(sum_register, last_register_mask, sum_register, *self.data.last().unwrap());
+
+            _mm512_reduce_mul_ps(sum_register)
+        }
+    }
+
+    pub fn dot_product(&self, other: &Self) -> f32 {
+        assert_same_shape2(self, other);
+
+        if self.shape[0] == 0 {
+            return 0.0;
+        }
+
+        let mut sum_register = array_to_m512([0.0; 16]);
+        let mut last_register_mask = 0xFFFF;
+
+        if self.shape[0] % 16 != 0 {
+            last_register_mask = 0xFFFF >> (16 - (self.shape[0] % 16));
+        }
+
+        unsafe {
+            for (d1, d2) in self.data[0..self.data.len() - 1].iter().zip(other.data[0..other.data.len() - 1].iter()) {
+                sum_register = _mm512_add_ps(sum_register, _mm512_mul_ps(*d1, *d2));
+            }
+
+            sum_register = _mm512_mask_add_ps(sum_register, last_register_mask, sum_register, _mm512_mul_ps(*self.data.last().unwrap(), *other.data.last().unwrap()));
+
+            _mm512_reduce_add_ps(sum_register)
+        }
+    }
+}
+
+impl<const D: usize> Array<D> {
     pub fn add(&self, other: &Self) -> Self {
         let mut new_array = self.clone();
         new_array.add_in_place(other);
@@ -119,7 +192,7 @@ impl Array1D {
     }
 
     pub fn add_in_place(&mut self, other: &Self) {
-        assert_same_lengths2(&self, &other);
+        assert_same_shape2(&self, &other);
 
         unsafe {
             for (l, r) in self.data.iter_mut().zip(other.data.iter()) {
@@ -136,7 +209,7 @@ impl Array1D {
     }
 
     pub fn sub_in_place(&mut self, other: &Self) {
-        assert_same_lengths2(&self, &other);
+        assert_same_shape2(&self, &other);
 
         unsafe {
             for (l, r) in self.data.iter_mut().zip(other.data.iter()) {
@@ -153,7 +226,7 @@ impl Array1D {
     }
 
     pub fn mul_in_place(&mut self, other: &Self) {
-        assert_same_lengths2(&self, &other);
+        assert_same_shape2(&self, &other);
 
         unsafe {
             for (l, r) in self.data.iter_mut().zip(other.data.iter()) {
@@ -170,7 +243,7 @@ impl Array1D {
     }
 
     pub fn div_in_place(&mut self, other: &Self) {
-        assert_same_lengths2(&self, &other);
+        assert_same_shape2(&self, &other);
 
         unsafe {
             for (l, r) in self.data.iter_mut().zip(other.data.iter()) {
@@ -187,11 +260,28 @@ impl Array1D {
     }
 
     pub fn max_in_place(&mut self, other: &Self) {
-        assert_same_lengths2(self, other);
+        assert_same_shape2(self, other);
 
         unsafe {
             for (l, r) in self.data.iter_mut().zip(other.data.iter()) {
                 *l = _mm512_max_ps(*l, *r);
+            }
+        }
+    }
+
+    pub fn min(&self, other: &Self) -> Self {
+        let mut new_array = self.clone();
+        new_array.min_in_place(other);
+
+        new_array
+    }
+
+    pub fn min_in_place(&mut self, other: &Self) {
+        assert_same_shape2(self, other);
+
+        unsafe {
+            for (l, r) in self.data.iter_mut().zip(other.data.iter()) {
+                *l = _mm512_min_ps(*l, *r);
             }
         }
     }
@@ -264,23 +354,6 @@ impl Array1D {
         }
     }
 
-    pub fn min(&self, other: &Self) -> Self {
-        let mut new_array = self.clone();
-        new_array.min_in_place(other);
-
-        new_array
-    }
-
-    pub fn min_in_place(&mut self, other: &Self) {
-        assert_same_lengths2(self, other);
-
-        unsafe {
-            for (l, r) in self.data.iter_mut().zip(other.data.iter()) {
-                *l = _mm512_min_ps(*l, *r);
-            }
-        }
-    }
-
     pub fn fmadd(&self, a: &Self, b: &Self) -> Self {
         let mut new_array = self.clone();
         new_array.fmadd_in_place(a, b);
@@ -289,7 +362,7 @@ impl Array1D {
     }
 
     pub fn fmadd_in_place(&mut self, a: &Self, b: &Self)  {
-        assert_same_lengths3(self, a, b);
+        assert_same_shape3(self, a, b);
 
         unsafe {
             for ((a, b), c) in a.data.iter().zip(b.data.iter()).zip(self.data.iter_mut()) {
@@ -343,8 +416,8 @@ impl Array1D {
         }
     }
 
-    fn compare(a: &Array1D, b: &Array1D, func: unsafe fn(__m512, __m512) -> __mmask16) -> Mask1D {
-        assert_same_lengths2(a, b);
+    fn compare(a: &Array<D>, b: &Array<D>, func: unsafe fn(__m512, __m512) -> __mmask16) -> Mask<D> {
+        assert_same_shape2(a, b);
         let mut masks = Vec::with_capacity(a.data.len());
 
         unsafe {
@@ -353,37 +426,37 @@ impl Array1D {
             }
         }
 
-        Mask1D {
+        Mask {
             masks,
-            len: a.len
+            shape: a.shape
         }
     }
 
-    pub fn compare_equal(&self, other: &Self) -> Mask1D {
+    pub fn compare_equal(&self, other: &Self) -> Mask<D> {
         Self::compare(self, other, _mm512_cmpeq_ps_mask)
     }
 
-    pub fn compare_not_equal(&self, other: &Self) -> Mask1D {
+    pub fn compare_not_equal(&self, other: &Self) -> Mask<D> {
         Self::compare(self, other, _mm512_cmpneq_ps_mask)
     }
 
-    pub fn compare_greater_than(&self, other: &Self) -> Mask1D {
+    pub fn compare_greater_than(&self, other: &Self) -> Mask<D> {
         Self::compare(self, other, _mm512_cmpnle_ps_mask)
     }
 
-    pub fn compare_greater_than_or_equal(&self, other: &Self) -> Mask1D {
+    pub fn compare_greater_than_or_equal(&self, other: &Self) -> Mask<D> {
         Self::compare(self, other, _mm512_cmpnlt_ps_mask)
     }
 
-    pub fn compare_less_than(&self, other: &Self) -> Mask1D {
+    pub fn compare_less_than(&self, other: &Self) -> Mask<D> {
         Self::compare(self, other, _mm512_cmplt_ps_mask)
     }
 
-    pub fn compare_less_than_or_equal(&self, other: &Self) -> Mask1D {
+    pub fn compare_less_than_or_equal(&self, other: &Self) -> Mask<D> {
         Self::compare(self, other, _mm512_cmple_ps_mask)
     }
     
-    pub fn exp(&self) -> Array1D {
+    pub fn exp(&self) -> Self {
         let mut tmp = self.clone();
         tmp.exp_in_place();
 
@@ -426,77 +499,6 @@ impl Array1D {
 
                 *x = r;
             }
-        }
-    }
-
-    pub fn sum(&self) -> f32 {
-        if self.len == 0 {
-            return 0.0;
-        }
-
-        let mut sum_register = array_to_m512([0.0; 16]);
-        let mut last_register_mask = 0xFFFF;
-
-        if self.len % 16 != 0 {
-            last_register_mask = 0xFFFF >> (16 - (self.len % 16));
-        }
-
-        unsafe {
-            for d in self.data[0..self.data.len() - 1].iter() {
-                sum_register = _mm512_add_ps(sum_register, *d);
-            }
-
-            sum_register = _mm512_mask_add_ps(sum_register, last_register_mask, sum_register, *self.data.last().unwrap());
-
-            _mm512_reduce_add_ps(sum_register)
-        }
-    }
-
-    pub fn product(&self) -> f32 {
-        if self.len == 0 {
-            return 1.0;
-        }
-
-        let mut sum_register = array_to_m512([1.0; 16]);
-        let mut last_register_mask = 0xFFFF;
-
-        if self.len % 16 != 0 {
-            last_register_mask = 0xFFFF >> (16 - (self.len % 16));
-        }
-
-        unsafe {
-            for d in self.data[0..self.data.len() - 1].iter() {
-                sum_register = _mm512_mul_ps(sum_register, *d);
-            }
-
-            sum_register = _mm512_mask_mul_ps(sum_register, last_register_mask, sum_register, *self.data.last().unwrap());
-
-            _mm512_reduce_mul_ps(sum_register)
-        }
-    }
-
-    pub fn dot_product(&self, other: &Self) -> f32 {
-        assert_same_lengths2(self, other);
-
-        if self.len == 0 {
-            return 0.0;
-        }
-
-        let mut sum_register = array_to_m512([0.0; 16]);
-        let mut last_register_mask = 0xFFFF;
-
-        if self.len % 16 != 0 {
-            last_register_mask = 0xFFFF >> (16 - (self.len % 16));
-        }
-
-        unsafe {
-            for (d1, d2) in self.data[0..self.data.len() - 1].iter().zip(other.data[0..other.data.len() - 1].iter()) {
-                sum_register = _mm512_add_ps(sum_register, _mm512_mul_ps(*d1, *d2));
-            }
-
-            sum_register = _mm512_mask_add_ps(sum_register, last_register_mask, sum_register, _mm512_mul_ps(*self.data.last().unwrap(), *other.data.last().unwrap()));
-
-            _mm512_reduce_add_ps(sum_register)
         }
     }
 }

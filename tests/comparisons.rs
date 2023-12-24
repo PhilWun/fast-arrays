@@ -1,24 +1,24 @@
 mod utils;
 
-use fast_arrays::{Array1D, Mask1D};
+use fast_arrays::{Array, Mask};
 use utils::get_random_f32_vec;
 
 use rstest::rstest;
 
 #[rstest]
-#[case::eq(Array1D::compare_equal, f32::eq)]
-#[case::neq(Array1D::compare_not_equal, f32::ne)]
-#[case::gt(Array1D::compare_greater_than, f32::gt)]
-#[case::ge(Array1D::compare_greater_than_or_equal, f32::ge)]
-#[case::lt(Array1D::compare_less_than, f32::lt)]
-#[case::le(Array1D::compare_less_than_or_equal, f32::le)]
-fn comparison(#[case] test_function: fn(&Array1D, &Array1D) -> Mask1D, #[case] target_function: fn(&f32, &f32) -> bool) {
+#[case::eq(Array::compare_equal, f32::eq)]
+#[case::neq(Array::compare_not_equal, f32::ne)]
+#[case::gt(Array::compare_greater_than, f32::gt)]
+#[case::ge(Array::compare_greater_than_or_equal, f32::ge)]
+#[case::lt(Array::compare_less_than, f32::lt)]
+#[case::le(Array::compare_less_than_or_equal, f32::le)]
+fn comparison(#[case] test_function: fn(&Array<1>, &Array<1>) -> Mask<1>, #[case] target_function: fn(&f32, &f32) -> bool) {
     for i in 0..64 {
         let data1 = get_random_f32_vec(0, i);
         let data2 = get_random_f32_vec(1, i);
 
-        let array1: Array1D = data1.clone().into();
-        let array2: Array1D = data2.clone().into();
+        let array1: Array<1> = data1.clone().into();
+        let array2: Array<1> = data2.clone().into();
 
         let result: Vec<bool> = test_function(&array1, &array2).into();
 
@@ -29,19 +29,19 @@ fn comparison(#[case] test_function: fn(&Array1D, &Array1D) -> Mask1D, #[case] t
 }
 
 #[rstest]
-#[case::eq(Array1D::compare_equal, f32::eq)]
-#[case::neq(Array1D::compare_not_equal, f32::ne)]
-#[case::gt(Array1D::compare_greater_than, f32::gt)]
-#[case::ge(Array1D::compare_greater_than_or_equal, f32::ge)]
-#[case::lt(Array1D::compare_less_than, f32::lt)]
-#[case::le(Array1D::compare_less_than_or_equal, f32::le)]
+#[case::eq(Array::compare_equal, f32::eq)]
+#[case::neq(Array::compare_not_equal, f32::ne)]
+#[case::gt(Array::compare_greater_than, f32::gt)]
+#[case::ge(Array::compare_greater_than_or_equal, f32::ge)]
+#[case::lt(Array::compare_less_than, f32::lt)]
+#[case::le(Array::compare_less_than_or_equal, f32::le)]
 #[should_panic]
-fn comparison_mismatched_shapes(#[case] test_function: fn(&Array1D, &Array1D) -> Mask1D, #[case] target_function: fn(&f32, &f32) -> bool) {
+fn comparison_mismatched_shapes(#[case] test_function: fn(&Array<1>, &Array<1>) -> Mask<1>, #[case] target_function: fn(&f32, &f32) -> bool) {
     let data1 = get_random_f32_vec(0, 3);
     let data2 = get_random_f32_vec(1, 4);
 
-    let array1: Array1D = data1.clone().into();
-    let array2: Array1D = data2.clone().into();
+    let array1: Array<1> = data1.clone().into();
+    let array2: Array<1> = data2.clone().into();
 
     let result: Vec<bool> = test_function(&array1, &array2).into();
 

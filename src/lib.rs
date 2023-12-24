@@ -10,19 +10,19 @@ use std::arch::x86_64::__m512;
 use std::arch::x86_64::__mmask16;
 
 #[derive(Clone)]
-pub struct Array1D {
+pub struct Array<const D: usize> {
     #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
     data: Vec<__m512>,
     #[cfg(not(all(target_arch = "x86_64", target_feature = "avx512f")))]
     data: Vec<f32>,
-    len: usize,
+    shape: [usize; D],
 }
 
 #[derive(Clone)]
-pub struct Mask1D {
+pub struct Mask<const D: usize> {
     #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
     masks: Vec<__mmask16>,
     #[cfg(not(all(target_arch = "x86_64", target_feature = "avx512f")))]
     data: Vec<bool>,
-    len: usize,
+    shape: [usize; D],
 }

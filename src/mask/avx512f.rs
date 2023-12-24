@@ -1,15 +1,15 @@
 use std::arch::x86_64::__mmask16;
 
-use crate::Mask1D;
+use crate::Mask;
 
-impl From<Mask1D> for Vec<bool> {
-    fn from(value: Mask1D) -> Self {
-        let mut converted = vec![false; value.len];
+impl From<Mask<1>> for Vec<bool> {
+    fn from(value: Mask<1>) -> Self {
+        let mut converted = vec![false; value.shape[0]];
         let mut index: usize = 0;
 
         for register in value.masks {
             for i in 0..16 {
-                if index >= value.len {
+                if index >= value.shape[0] {
                     break;
                 }
 
@@ -22,7 +22,7 @@ impl From<Mask1D> for Vec<bool> {
     }
 }
 
-impl From<Vec<bool>> for Mask1D {
+impl From<Vec<bool>> for Mask<1> {
     fn from(value: Vec<bool>) -> Self {
         let register_count = value.len().div_ceil(16);
         let mut masks: Vec<__mmask16> = Vec::with_capacity(register_count);
@@ -43,19 +43,19 @@ impl From<Vec<bool>> for Mask1D {
 
         Self {
             masks,
-            len: value.len(),
+            shape: [value.len()],
         }
     }
 }
 
-impl Mask1D {
+impl Mask<1> {
     pub fn new(len: usize) -> Self {
         let mask_count = len.div_ceil(16);
-        let masks = vec![0u16; len];
+        let masks = vec![0u16; mask_count];
 
         Self {
             masks,
-            len: mask_count
+            shape: [len]
         }
     }
 }

@@ -141,7 +141,6 @@ impl Add for Array1D {
     }
 }
 
-// TODO: checked and unchecked operators
 impl AddAssign for Array1D {
     fn add_assign(&mut self, rhs: Self) {
         if self.len != rhs.len {
