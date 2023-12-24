@@ -4,13 +4,26 @@ use fast_arrays::Array;
 use utils::get_random_f32_vec;
 
 #[test]
-fn conversion() {
+fn conversion1d() {
     for i in 0..64 {
         let data = get_random_f32_vec(0, i);
         let converted: Array<1> = data.clone().into();
         let converted_back: Vec<f32> = converted.into();
 
         assert_eq!(converted_back, data);
+    }
+}
+
+#[test]
+fn conversion2d() {
+    for i in 1..32 {
+        for j in 1..32 {
+            let data = get_random_f32_vec(0, i * j);
+            let converted: Array<2> = Array::<2>::from_vec(&data, [i, j]);
+            let converted_back: Vec<f32> = converted.into();
+
+            assert_eq!(converted_back, data);
+        }
     }
 }
 
