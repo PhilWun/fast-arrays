@@ -1,4 +1,4 @@
-use std::arch::x86_64::{_mm512_add_ps, _mm512_mask_add_ps, _mm512_mul_ps, _mm512_mask_mul_ps, _mm512_reduce_add_ps, _mm512_reduce_mul_ps};
+use std::arch::x86_64::{_mm512_add_ps, _mm512_mask_add_ps, _mm512_mul_ps, _mm512_mask_mul_ps, _mm512_reduce_add_ps, _mm512_reduce_mul_ps, _mm512_fmadd_ps, _mm512_mask3_fmadd_ps};
 
 use crate::Array;
 
@@ -111,5 +111,36 @@ impl Array<2> {
             
             _mm512_reduce_mul_ps(product_register)
         }
+    }
+
+    pub fn vector_multiplication(&self, other: &Array<1>) -> Array<1> {
+        assert_eq!(self.shape[1], other.shape[0]);
+
+        let row_count = self.shape[0];
+        let column_count = self.shape[1];
+        let registers_per_row = column_count.div_ceil(16);
+        let mut last_register_mask = 0xFFFF;
+
+        if column_count % 16 != 0 {
+            last_register_mask = 0xFFFF >> (16 - (column_count % 16));
+        }
+
+        let mut result = Vec::with_capacity(row_count);
+
+        unsafe {
+            for i in 0..row_count {
+                let mut sum = array_to_m512([0.0; 16]);
+
+                for j in 0..registers_per_row - 1 {
+                    sum = _mm512_fmadd_ps(self.data[i * registers_per_row + j], other.data[j], sum);
+                }
+
+                sum = _mm512_mask3_fmadd_ps(self.data[(i + 1) * registers_per_row - 1], other.data[registers_per_row - 1], sum, last_register_mask);
+
+                result.push(_mm512_reduce_add_ps(sum));
+            }
+        }
+
+        result.into()
     }
 }

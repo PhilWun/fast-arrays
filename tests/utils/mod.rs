@@ -29,3 +29,10 @@ pub fn assert_approximate(a: f32, b: f32) {
         assert!((1.0 - (a / b)).abs() < 0.001, "difference too big between {} and {}", a, b);
     }
 }
+
+#[allow(dead_code)]
+pub fn assert_approximate_vector(a: &Vec<f32>, b: &Vec<f32>) {
+    for (a, b) in a.iter().zip(b.iter()) {
+        assert_approximate(*a, *b);
+    }
+}
