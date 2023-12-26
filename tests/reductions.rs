@@ -16,7 +16,7 @@ fn reduction1d_one_input(#[case] test_function: fn(&Array<1>) -> f32, #[case] ta
         let result = test_function(&array);
         let target = target_function(&data);
 
-        assert_approximate(result, target);
+        assert_approximate(result, target, 0.001);
     }
 }
 
@@ -32,7 +32,7 @@ fn reduction2d_one_input(#[case] test_function: fn(&Array<2>) -> f32, #[case] ta
             let result = test_function(&array);
             let target = target_function(&data);
 
-            assert_approximate(result, target);
+            assert_approximate(result, target, 0.001);
         }
     }
 }
@@ -49,7 +49,7 @@ fn reduction_two_inputs(#[case] test_function: fn(&Array<1>, &Array<1>) -> f32, 
         let result = test_function(&array1, &array2);
         let target = target_function(&data1, &data2);
 
-        assert_approximate(result, target);
+        assert_approximate(result, target, 0.001);
     }
 }
 

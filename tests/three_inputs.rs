@@ -21,7 +21,7 @@ fn in_place_ref(#[case] test_function: fn(&mut Array<1>, &Array<1>, &Array<1>), 
         let result: Vec<f32> = array1.into();
 
         for (((d1, d2), d3), r) in data1.iter().zip(data2.iter()).zip(data3.iter()).zip(result.iter()) {
-            assert_approximate(*r, target_function(*d1, *d2, *d3));
+            assert_approximate(*r, target_function(*d1, *d2, *d3), 0.001);
         }
     }
 }
@@ -52,7 +52,7 @@ fn out_of_place_ref(#[case] test_function: fn(&Array<1>, &Array<1>, &Array<1>) -
         let result: Vec<f32> = test_function(&array1, &array2, &array3).into();
 
         for (((d1, d2), d3), r) in data1.iter().zip(data2.iter()).zip(data3.iter()).zip(result.iter()) {
-            assert_approximate(*r, target_function(*d1, *d2, *d3));
+            assert_approximate(*r, target_function(*d1, *d2, *d3), 0.001);
         }
     }
 }

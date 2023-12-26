@@ -19,7 +19,7 @@ fn in_place(#[case] test_function: fn(&mut Array<1>), #[case] target_function: f
         let result: Vec<f32> = array1.into();
 
         for (d, r) in data1.iter().zip(result.iter()) {
-            assert_approximate(*r, target_function(*d));
+            assert_approximate(*r, target_function(*d), 0.001);
         }
     }
 }
@@ -36,7 +36,7 @@ fn ref_out_of_place(#[case] test_function: fn(&Array<1>) -> Array<1>, #[case] ta
         let result: Vec<f32> = test_function(&array).into();
 
         for (d, r) in data.iter().zip(result.iter()) {
-            assert_approximate(*r, target_function(*d));
+            assert_approximate(*r, target_function(*d), 0.001);
         }
     }
 }

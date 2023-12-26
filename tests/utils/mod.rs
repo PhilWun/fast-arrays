@@ -14,7 +14,7 @@ pub fn get_random_f32_vec(seed: u64, len: usize) -> Vec<f32> {
 }
 
 #[allow(dead_code)]
-pub fn assert_approximate(a: f32, b: f32) {
+pub fn assert_approximate(a: f32, b: f32, epsilon: f32) {
     if a.is_nan() && b.is_nan() {
         return;
     }
@@ -24,15 +24,15 @@ pub fn assert_approximate(a: f32, b: f32) {
     }
 
     if a == 0.0 || b == 0.0 {
-        assert!((a - b).abs() < 0.001, "difference too big between {} and {}", a, b);
+        assert!((a - b).abs() < epsilon, "difference too big between {} and {}", a, b);
     } else {
-        assert!((1.0 - (a / b)).abs() < 0.001, "difference too big between {} and {}", a, b);
+        assert!((1.0 - (a / b)).abs() < epsilon, "difference too big between {} and {}", a, b);
     }
 }
 
 #[allow(dead_code)]
-pub fn assert_approximate_vector(a: &Vec<f32>, b: &Vec<f32>) {
+pub fn assert_approximate_vector(a: &Vec<f32>, b: &Vec<f32>, epsilon: f32) {
     for (a, b) in a.iter().zip(b.iter()) {
-        assert_approximate(*a, *b);
+        assert_approximate(*a, *b, epsilon);
     }
 }
