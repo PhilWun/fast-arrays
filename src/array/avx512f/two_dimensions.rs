@@ -202,25 +202,57 @@ impl Array<2> {
         padded_chunk
     }
 
+    fn transpose(&self) -> Self {
+        let chunk_rows = self.shape[0].div_ceil(16);
+        let chunk_columns = self.shape[1].div_ceil(16);
+        let mut transposed_data = Vec::with_capacity(chunk_rows * 16 * self.shape[1]);
+
+        for chunk_column in 0..chunk_columns {
+            let mut transposed_chunks = Vec::new();
+
+            for chunk_row in 0..chunk_rows {
+                let chunk = Self::get_padded_chunk(self, chunk_row, chunk_column);
+                transposed_chunks.push(Self::transpose_chunk(&chunk));
+            }
+
+            let start_column = chunk_column * 16;
+            let end_column = ((chunk_column + 1) * 16).min(self.shape[1]);
+            
+            for i in 0..(end_column - start_column) {
+                for row in 0..chunk_rows {
+                    transposed_data.push(transposed_chunks[row][i]);
+                }
+            }
+        }
+
+        Self {
+            data: transposed_data,
+            shape: [self.shape[1], self.shape[0]]
+        }
+    }
+
     pub fn matrix_multiplication(&self, matrix_b: &Self) -> Self {
         let matrix_a = self;
         let column_chunks_a = matrix_a.shape[1].div_ceil(16);
         let row_chunks_b = matrix_b.shape[0].div_ceil(16);
         let column_chunks_b = matrix_b.shape[1].div_ceil(16);
         let mut result_data = Vec::with_capacity(matrix_a.shape[0] * column_chunks_b);
+        let transposed_b = matrix_b.transpose();
 
         unsafe {
             for row_a in 0..matrix_a.shape[0] {
-                for chunk_column_b in 0..column_chunks_b {
+                for column_b in 0..column_chunks_b {
                     let mut temp_results = [array_to_m512([0.0; 16]); 16];
+                    let start_column = column_b* 16;
+                    let end_column = ((column_b + 1) * 16).min(matrix_b.shape[1]);
 
-                    for chunk_inner_loop_index in 0..row_chunks_b { // TODO: change loop order to do transposing only once per chunk
-                        let chunk_b = Self::get_padded_chunk(matrix_b, chunk_inner_loop_index, chunk_column_b);
-                        let transposed_chunk_b = Self::transpose_chunk(&chunk_b);
-                        let register_a = matrix_a.data[row_a * column_chunks_a + chunk_inner_loop_index];
+                    let matrix_a_index = row_a * column_chunks_a;
+
+                    for i in 0..(end_column - start_column) {
+                        let matrix_b_index = (column_b * 16 + i) * row_chunks_b;
                         
-                        for i in 0..16 {
-                            temp_results[i] = _mm512_fmadd_ps(register_a, transposed_chunk_b[i], temp_results[i]);
+                        for chunk_inner_loop_index in 0..row_chunks_b {
+                            temp_results[i] = _mm512_fmadd_ps(self.data[matrix_a_index + chunk_inner_loop_index],transposed_b.data[matrix_b_index + chunk_inner_loop_index], temp_results[i]);
                         }
                     }
 
