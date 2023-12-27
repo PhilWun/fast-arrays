@@ -8,8 +8,8 @@ name = "fast_arrays"
 path = "src/lib.rs"
 
 [[bin]]
-name = "example_code"
-path = "src/bin/example_code.rs"
+name = "benchmark"
+path = "src/bin/benchmark.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -19,8 +19,8 @@ path = "src/bin/example_code.rs"
 # debug = 0
 
 [dependencies]
+rand = "0.8.5"
+rand_chacha = "0.3.1"
 
 [dev-dependencies]
 rstest = "0.18.2"
-rand = "0.8.5"
-rand_chacha = "0.3.1"

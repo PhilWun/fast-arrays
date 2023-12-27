@@ -28,11 +28,22 @@ fn conversion2d() {
 }
 
 #[test]
-fn zeros() {
+fn zeros1d() {
     for i in 0..64 {
-        let zeros: Vec<f32> = Array::zeros(i).into();
+        let zeros: Vec<f32> = Array::zeros(&[i]).into();
 
         assert_eq!(zeros, vec![0.0; i]);
+    }
+}
+
+#[test]
+fn zeros2d() {
+    for i in 0..32 {
+        for j in 0..32 {
+            let zeros: Vec<f32> = Array::zeros(&[i, j]).into();
+
+            assert_eq!(zeros, vec![0.0; i * j]);
+        }
     }
 }
 

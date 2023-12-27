@@ -6,6 +6,9 @@ use std::{
     simd::f32x16
 };
 
+use rand::{distributions::{Uniform, Distribution}, SeedableRng};
+use rand_chacha::ChaCha20Rng;
+
 use crate::{Array, Mask};
 
 fn m512_to_array(value: __m512) -> [f32; 16] {
@@ -46,7 +49,55 @@ unsafe fn reduce(data: &[__m512], len: usize, default_value: f32, func: unsafe f
     result_register
 }
 
+fn calculate_register_count(shape: &[usize]) -> usize {
+    let mut register_count = shape.last().unwrap().div_ceil(16);
+
+    for i in 0..shape.len() - 1 {
+        register_count *= shape[i];
+    }
+
+    register_count
+}
+
 impl<const D: usize> Array<D> {
+    pub fn zeros(shape: &[usize; D]) -> Self {
+        assert!(D > 0);
+        
+        let register_count = calculate_register_count(shape);
+        let zero = array_to_m512([0f32; 16]);
+        let data = vec![zero; register_count];
+
+        Self {
+            data,
+            shape: *shape,
+        }
+    }
+
+    pub fn random_uniform(shape: &[usize; D], min: f32, max: f32, seed: Option<u64>) -> Self {
+        let mut rng = match seed {
+            Some(seed) => ChaCha20Rng::seed_from_u64(seed),
+            None => ChaCha20Rng::from_entropy(),
+        };
+
+        let distribution = Uniform::new(min, max);
+        let register_count = calculate_register_count(shape);
+        let mut data = Vec::with_capacity(register_count);
+        let mut tmp_register_data = [0.0; 16];
+
+        for _ in 0..register_count {
+            for i in 0..16 {
+                tmp_register_data[i] = distribution.sample(&mut rng);
+            }
+
+            data.push(array_to_m512(tmp_register_data));
+        }
+
+        Self {
+            data,
+            shape: *shape
+        }
+    }
+
     pub fn add(&self, other: &Self) -> Self {
         let mut new_array = self.clone();
         new_array.add_in_place(other);

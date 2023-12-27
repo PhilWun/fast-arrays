@@ -53,17 +53,6 @@ impl From<Vec<f32>> for Array<1> {
 }
 
 impl Array<1> {
-    pub fn zeros(len: usize) -> Self {
-        let register_count = len.div_ceil(16);
-        let zero = array_to_m512([0f32; 16]);
-        let data = vec![zero; register_count];
-
-        Self {
-            data,
-            shape: [len],
-        }
-    }
-
     pub fn get(&self, index: usize) -> f32 {
         if index >= self.shape[0] {
             panic!("tried to get index {}, but the array has only {} element(s)", index, self.shape[0]);
