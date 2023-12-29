@@ -98,6 +98,7 @@ impl<const D: usize> Array<D> {
         }
     }
 
+    // TODO: add masked operations
     pub fn add(&self, other: &Self) -> Self {
         let mut new_array = self.clone();
         new_array.add_in_place(other);

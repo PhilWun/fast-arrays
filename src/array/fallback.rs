@@ -1,253 +1,417 @@
-use std::ops::{Add, Sub, Mul, Div, AddAssign, SubAssign, MulAssign, DivAssign};
+use rand::{distributions::{Uniform, Distribution}, SeedableRng};
+use rand_chacha::ChaCha20Rng;
 
-use crate::Array1D;
+use crate::{Array, Mask};
 
-impl From<Array1D> for Vec<f32> {
-    fn from(value: Array1D) -> Self {
-        value.data.clone()
+impl<const D: usize> From<Array<D>> for Vec<f32> {
+    fn from(value: Array<D>) -> Self {
+        value.data
     }
 }
 
-impl From<Vec<f32>> for Array1D {
+impl From<Vec<f32>> for Array<1> {
     fn from(value: Vec<f32>) -> Self {
         let len = value.len();
 
-        Array1D {
+        Array {
             data: value,
-            len: len,
+            shape: [len]
         }
     }
 }
 
-impl Array1D {
-    pub fn zeros(len: usize) -> Self {
+fn calculate_size(shape: &[usize]) -> usize {
+    let mut size = 1;
+
+    for s in shape {
+        size *= s;
+    }
+
+    size
+}
+
+fn assert_same_shape2<const D: usize>(a: &Array<D>, b: &Array<D>) {
+    assert_eq!(a.shape, b.shape, "the lengths of array one and two don't match: {:?} != {:?}", a.shape, b.shape);
+}
+
+fn assert_same_shape3<const D: usize>(a: &Array<D>, b: &Array<D>, c: &Array<D>) {
+    assert_eq!(a.shape, b.shape, "the lengths of array one and two don't match: {:?} != {:?}", a.shape, b.shape);
+    assert_eq!(b.shape, c.shape, "the lengths of array two and three don't match: {:?} != {:?}", b.shape, c.shape);
+}
+
+impl<const D: usize> Array<D> {
+    pub fn zeros(shape: &[usize; D]) -> Self {
         Self {
-            data: vec![0.0; len],
-            len: len,
+            data: vec![0.0; calculate_size(shape)],
+            shape: *shape,
         }
     }
 
-    pub fn get(&self, index: usize) -> Option<f32> {
-        self.data.get(index).map(|x| *x)
+    pub fn random_uniform(shape: &[usize; D], min: f32, max: f32, seed: Option<u64>) -> Self {
+        let mut rng = match seed {
+            Some(seed) => ChaCha20Rng::seed_from_u64(seed),
+            None => ChaCha20Rng::from_entropy(),
+        };
+
+        let distribution = Uniform::new(min, max);
+        let size = calculate_size(shape);
+        let mut data = Vec::with_capacity(size);
+
+        for _ in 0..size {
+            data.push(distribution.sample(&mut rng));
+        }
+
+        Self {
+            data,
+            shape: *shape
+        }
     }
 
-    pub fn set(&mut self, index: usize, value: f32) -> Option<()> {
-        self.data.get_mut(index).map(|x| *x = value)
+    pub fn add(&self, other: &Self) -> Self {
+        let mut new_array = self.clone();
+        new_array.add_in_place(other);
+
+        new_array
     }
 
-    pub fn max(&self, other: &Self) -> Result<Self, ()> {
-        if self.len != other.len {
-            return Err(());
+    pub fn add_in_place(&mut self, other: &Self) {
+        assert_same_shape2(&self, &other);
+
+        for (l, r) in self.data.iter_mut().zip(other.data.iter()) {
+            *l = *l + *r;
         }
-
-        let mut new_data = Vec::with_capacity(self.data.len());
-
-        for (l, r) in self.data.iter().zip(other.data.iter()) {
-            new_data.push(l.max(*r));
-        }
-
-        Ok(Self {
-            data: new_data,
-            len: self.len,
-        })
     }
 
-    pub fn min(&self, other: &Self) -> Result<Self, ()> {
-        if self.len != other.len {
-            return Err(());
+    pub fn sub(&self, other: &Self) -> Self {
+        let mut new_array = self.clone();
+        new_array.sub_in_place(other);
+
+        new_array
+    }
+
+    pub fn sub_in_place(&mut self, other: &Self) {
+        assert_same_shape2(&self, &other);
+
+        for (l, r) in self.data.iter_mut().zip(other.data.iter()) {
+            *l = *l - *r;
         }
+    }
 
-        let mut new_data = Vec::with_capacity(self.data.len());
+    pub fn mul(&self, other: &Self) -> Self {
+        let mut new_array = self.clone();
+        new_array.mul_in_place(other);
 
-        for (l, r) in self.data.iter().zip(other.data.iter()) {
-            new_data.push(l.min(*r));
+        new_array
+    }
+
+    pub fn mul_in_place(&mut self, other: &Self) {
+        assert_same_shape2(&self, &other);
+
+        for (l, r) in self.data.iter_mut().zip(other.data.iter()) {
+            *l = *l * *r;
         }
+    }
 
-        Ok(Self {
-            data: new_data,
-            len: self.len,
-        })
+    pub fn div(&self, other: &Self) -> Self {
+        let mut new_array = self.clone();
+        new_array.div_in_place(other);
+
+        new_array
+    }
+
+    pub fn div_in_place(&mut self, other: &Self) {
+        assert_same_shape2(&self, &other);
+
+        for (l, r) in self.data.iter_mut().zip(other.data.iter()) {
+            *l = *l / *r;
+        }
+    }
+
+    pub fn max(&self, other: &Self) -> Self {
+        let mut new_array = self.clone();
+        new_array.max_in_place(other);
+
+        new_array
+    }
+
+    pub fn max_in_place(&mut self, other: &Self) {
+        assert_same_shape2(self, other);
+
+        for (l, r) in self.data.iter_mut().zip(other.data.iter()) {
+            *l = l.max(*r);
+        }
+    }
+
+    pub fn min(&self, other: &Self) -> Self {
+        let mut new_array = self.clone();
+        new_array.min_in_place(other);
+
+        new_array
+    }
+
+    pub fn min_in_place(&mut self, other: &Self) {
+        assert_same_shape2(self, other);
+
+        for (l, r) in self.data.iter_mut().zip(other.data.iter()) {
+            *l = l.min(*r);
+        }
+    }
+
+    pub fn add_scalar(&self, scalar: f32) -> Self {
+        let mut new_array = self.clone();
+        new_array.add_scalar_in_place(scalar);
+
+        new_array
+    }
+
+    pub fn add_scalar_in_place(&mut self, scalar: f32) {
+        for d in self.data.iter_mut() {
+            *d = *d + scalar;
+        }
+    }
+
+    pub fn sub_scalar(&self, scalar: f32) -> Self {
+        let mut new_array = self.clone();
+        new_array.sub_scalar_in_place(scalar);
+
+        new_array
+    }
+
+    pub fn sub_scalar_in_place(&mut self, scalar: f32) {
+        for d in self.data.iter_mut() {
+            *d = *d - scalar;
+        }
+    }
+
+    pub fn mul_scalar(&self, scalar: f32) -> Self {
+        let mut new_array = self.clone();
+        new_array.mul_scalar_in_place(scalar);
+
+        new_array
+    }
+
+    pub fn mul_scalar_in_place(&mut self, scalar: f32) {
+        for d in self.data.iter_mut() {
+            *d = *d * scalar;
+        }
+    }
+
+    pub fn div_scalar(&self, scalar: f32) -> Self {
+        let mut new_array = self.clone();
+        new_array.div_scalar_in_place(scalar);
+
+        new_array
+    }
+
+    pub fn div_scalar_in_place(&mut self, scalar: f32) {
+        for d in self.data.iter_mut() {
+            *d = *d / scalar;
+        }
+    }
+
+    pub fn fmadd(&self, a: &Self, b: &Self) -> Self {
+        let mut new_array = self.clone();
+        new_array.fmadd_in_place(a, b);
+
+        new_array
+    }
+
+    pub fn fmadd_in_place(&mut self, a: &Self, b: &Self)  {
+        assert_same_shape3(self, a, b);
+
+        for ((a, b), c) in a.data.iter().zip(b.data.iter()).zip(self.data.iter_mut()) {
+            *c = *a * *b + *c;
+        }
     }
 
     pub fn sqrt(&self) -> Self {
-        let mut new_data = Vec::with_capacity(self.data.len());
+        let mut new_array = self.clone();
+        new_array.sqrt_in_place();
+
+        new_array
+    }
+
+    pub fn sqrt_in_place(&mut self) {
+        for d in self.data.iter_mut() {
+            *d = d.sqrt();
+        }
+    }
+
+    pub fn square(&self) -> Self {
+        let mut new_array = self.clone();
+        new_array.square_in_place();
+
+        new_array
+    }
+
+    pub fn square_in_place(&mut self) {
+        for d in self.data.iter_mut() {
+            *d = *d * *d;
+        }
+    }
+
+    pub fn abs(&self) -> Self {
+        let mut new_array = self.clone();
+        new_array.abs_in_place();
+
+        new_array
+    }
+
+    pub fn abs_in_place(&mut self) {
+        for d in self.data.iter_mut() {
+            *d = d.abs();
+        }
+    }
+
+    pub fn sum(&self) -> f32 {
+        let mut sum = 0.0;
 
         for v in self.data.iter() {
-            new_data.push(v.sqrt());
+            sum += v;
+        }
+
+        sum
+    }
+
+    pub fn product(&self) -> f32 {
+        let mut product = 1.0;
+
+        for v in self.data.iter() {
+            product *= v;
+        }
+
+        product
+    }
+
+    fn compare(a: &Array<D>, b: &Array<D>, func: fn(&f32, &f32) -> bool) -> Mask<D> {
+        assert_same_shape2(a, b);
+        let mut data = Vec::with_capacity(a.data.len());
+
+        for (d1, d2) in a.data.iter().zip(b.data.iter()) {
+            data.push(func(d1, d2));
+        }
+
+        Mask {
+            data,
+            shape: a.shape
+        }
+    }
+
+    pub fn compare_equal(&self, other: &Self) -> Mask<D> {
+        Self::compare(self, other, f32::eq)
+    }
+
+    pub fn compare_not_equal(&self, other: &Self) -> Mask<D> {
+        Self::compare(self, other, f32::ne)
+    }
+
+    pub fn compare_greater_than(&self, other: &Self) -> Mask<D> {
+        Self::compare(self, other, f32::gt)
+    }
+
+    pub fn compare_greater_than_or_equal(&self, other: &Self) -> Mask<D> {
+        Self::compare(self, other, f32::ge)
+    }
+
+    pub fn compare_less_than(&self, other: &Self) -> Mask<D> {
+        Self::compare(self, other, f32::lt)
+    }
+
+    pub fn compare_less_than_or_equal(&self, other: &Self) -> Mask<D> {
+        Self::compare(self, other, f32::le)
+    }
+
+    pub fn exp(&self) -> Self {
+        let mut tmp = self.clone();
+        tmp.exp_in_place();
+
+        tmp
+    }
+
+    pub fn exp_in_place(&mut self) {
+        for d in self.data.iter_mut() {
+            *d = d.exp()
+        }
+    }
+}
+
+impl Array<1> {
+    pub fn get(&self, index: usize) -> f32 {
+        if index >= self.shape[0] {
+            panic!("tried to get index {}, but the array has only {} element(s)", index, self.shape[0]);
+        }
+
+        self.data[index]
+    }
+
+    pub fn set(&mut self, index: usize, value: f32) {
+        if index >= self.shape[0] {
+            panic!("tried to set index {}, but the array has only {} element(s)", index, self.shape[0]);
+        }
+
+        self.data[index] = value;
+    }
+
+    pub fn dot_product(&self, other: &Self) -> f32 {
+        let mut result = 0.0;
+
+        for (v1, v2) in self.data.iter().zip(other.data.iter()) {
+            result += v1 * v2;
+        }
+
+        result
+    }
+}
+
+impl Array<2> {
+    pub fn from_vec(data: &Vec<f32>, shape: [usize; 2]) -> Self {
+        assert!(shape[0] > 0);
+        assert!(shape[1] > 0);
+
+        Self {
+            data: data.clone(),
+            shape
+        }
+    }
+
+    pub fn vector_multiplication(&self, other: &Array<1>) -> Array<1> {
+        let rows = self.shape[0];
+        let columns = self.shape[1];
+        let mut result = Vec::with_capacity(columns);
+
+        for i in 0..rows {
+            let mut sum = 0.0;
+
+            for j in 0..columns {
+                sum += self.data[i * columns + j] * other.data[j];
+            }
+
+            result.push(sum);
+        }
+
+        Array::<1> {
+            data: result,
+            shape: [rows],
+        }
+    }
+
+    pub fn matrix_multiplication(&self, matrix_b: &Self) -> Self {
+        let a_rows = self.shape[0];
+        let a_columns = self.shape[1];
+        let b_columns = matrix_b.shape[1];
+        let mut result = vec![0.0; a_rows * b_columns];
+
+        for a_row in 0..a_rows {
+            for b_column in 0..b_columns {
+                for inner_loop_index in 0..a_columns {
+                    result[a_row * b_columns + b_column] += self.data[a_row * a_columns + inner_loop_index] * matrix_b.data[inner_loop_index * b_columns + b_column];
+                }
+            }
         }
 
         Self {
-            data: new_data,
-            len: self.len,
-        }
-    }
-
-    pub fn fmadd(&self, a: &Self, b: &Self) -> Result<Self, ()> {
-        if self.len != a.len {
-            return Err(());
-        }
-
-        if self.len != b.len {
-            return Err(());
-        }
-
-        let mut new_data = Vec::with_capacity(self.data.len());
-
-        for ((a, b), c) in a.data.iter().zip(b.data.iter()).zip(self.data.iter()) {
-            new_data.push(a * b + c);
-        }
-
-        Ok(Self {
-            data: new_data,
-            len: self.len
-        })
-    }
-
-    pub fn fmadd_in_place(&mut self, a: &Self, b: &Self) -> Result<(), ()> {
-        if self.len != a.len {
-            return Err(());
-        }
-
-        if self.len != b.len {
-            return Err(());
-        }
-
-        for ((a, b), c) in a.data.iter().zip(b.data.iter()).zip(self.data.iter_mut()) {
-            *c += a * b;
-        }
-
-        Ok(())
-    }
-}
-
-impl Add for Array1D {
-    type Output = Result<Self, ()>;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        if self.len != rhs.len {
-            return Err(());
-        }
-
-        let mut new_data = Vec::with_capacity(self.data.len());
-
-        for (l, r) in self.data.iter().zip(rhs.data.iter()) {
-            new_data.push(*l + *r);
-        }
-
-        Ok(Self {
-            data: new_data,
-            len: self.len,
-        })
-    }
-}
-
-impl AddAssign for Array1D {
-    fn add_assign(&mut self, rhs: Self) {
-        if self.len != rhs.len {
-            panic!();
-        }
-
-        for (l, r) in self.data.iter_mut().zip(rhs.data.iter()) {
-            *l += r;
-        }
-    }
-}
-
-impl Sub for Array1D {
-    type Output = Result<Self, ()>;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        if self.len != rhs.len {
-            return Err(());
-        }
-
-        let mut new_data = Vec::with_capacity(self.data.len());
-
-        for (l, r) in self.data.iter().zip(rhs.data.iter()) {
-            new_data.push(*l - *r);
-        }
-
-        Ok(Self {
-            data: new_data,
-            len: self.len,
-        })
-    }
-}
-
-impl SubAssign for Array1D {
-    fn sub_assign(&mut self, rhs: Self) {
-        if self.len != rhs.len {
-            panic!();
-        }
-
-        for (l, r) in self.data.iter_mut().zip(rhs.data.iter()) {
-            *l -= r;
-        }
-    }
-}
-
-impl Mul for Array1D {
-    type Output = Result<Self, ()>;
-
-    fn mul(self, rhs: Self) -> Self::Output {
-        if self.len != rhs.len {
-            return Err(());
-        }
-
-        let mut new_data = Vec::with_capacity(self.data.len());
-
-        for (l, r) in self.data.iter().zip(rhs.data.iter()) {
-            new_data.push(*l * *r);
-        }
-
-        Ok(Self {
-            data: new_data,
-            len: self.len,
-        })
-    }
-}
-
-impl MulAssign for Array1D {
-    fn mul_assign(&mut self, rhs: Self) {
-        if self.len != rhs.len {
-            panic!();
-        }
-
-        for (l, r) in self.data.iter_mut().zip(rhs.data.iter()) {
-            *l *= r;
-        }
-    }
-}
-
-impl Div for Array1D {
-    type Output = Result<Self, ()>;
-
-    fn div(self, rhs: Self) -> Self::Output {
-        if self.len != rhs.len {
-            return Err(());
-        }
-
-        let mut new_data = Vec::with_capacity(self.data.len());
-
-        for (l, r) in self.data.iter().zip(rhs.data.iter()) {
-            new_data.push(*l / *r);
-        }
-
-        Ok(Self {
-            data: new_data,
-            len: self.len,
-        })
-    }
-}
-
-impl DivAssign for Array1D {
-    fn div_assign(&mut self, rhs: Self) {
-        if self.len != rhs.len {
-            panic!();
-        }
-
-        for (l, r) in self.data.iter_mut().zip(rhs.data.iter()) {
-            *l /= r;
+            data: result,
+            shape: [a_rows, b_columns],
         }
     }
 }
