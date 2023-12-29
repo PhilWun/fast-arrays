@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"editor.inlayHints.enabled": "offUnlessPressed",
+		"rust-analyzer.linkedProjects": [
+			"./Cargo.toml"
+		],
+		"rust-analyzer.showUnlinkedFileNotification": false
+	}
+}
