@@ -1,0 +1,2 @@
+Fast Arrays
+Copyright 2023 Philipp Wundrack
