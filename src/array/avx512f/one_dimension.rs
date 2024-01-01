@@ -96,6 +96,14 @@ impl Array<1> {
         self.data[register_index] = array_to_m512(new_register);
     }
 
+    pub fn set_all(&mut self, value: f32) {
+        let new_register = array_to_m512([value; 16]);
+
+        for d in self.data.iter_mut() {
+            *d = new_register;
+        }
+    }
+
     pub fn sum(&self) -> f32 {
         if self.shape[0] == 0 {
             return 0.0;

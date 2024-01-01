@@ -64,6 +64,30 @@ fn zeros2d() {
 }
 
 #[test]
+fn random1d() {
+    for i in 0..64 {
+        let array: Vec<f32> = Array::random_uniform(&[i], -1.0, 1.0, Some(0)).into();
+
+        for v in array {
+            assert!(v >= -1.0 && v <= 1.0);
+        }
+    }
+}
+
+#[test]
+fn random2d() {
+    for i in 0..32 {
+        for j in 0..32 {
+            let array: Vec<f32> = Array::random_uniform(&[i, j], -1.0, 1.0, Some(0)).into();
+
+            for v in array {
+                assert!(v >= -1.0 && v <= 1.0);
+            }
+        }
+    }
+}
+
+#[test]
 fn get() {
     let data = get_random_f32_vec(0, 64);
     let array: Array<1> = data.clone().into();
@@ -99,4 +123,17 @@ fn set_out_of_bounds() {
     let data = get_random_f32_vec(0, 64);
     let mut array: Array<1> = data.into();
     array.set(64, 42.0);
+}
+
+#[test]
+fn set_all() {
+    for i in 0..64 {
+        let data = get_random_f32_vec(0, i);
+        let mut array: Array<1> = data.clone().into();
+
+        array.set_all(42.0);
+        let new_data: Vec<f32> = array.into();
+
+        assert_eq!(new_data, vec![42.0f32; i]);
+    }
 }

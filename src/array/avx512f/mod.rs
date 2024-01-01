@@ -77,10 +77,14 @@ fn calculate_register_count(shape: &[usize]) -> usize {
 
 impl<const D: usize> Array<D> {
     pub fn zeros(shape: &[usize; D]) -> Self {
+        Self::new_from_value(shape, 0.0)
+    }
+
+    pub fn new_from_value(shape: &[usize; D], value: f32) -> Self {
         assert!(D > 0);
         
         let register_count = calculate_register_count(shape);
-        let zero = array_to_m512([0f32; 16]);
+        let zero = array_to_m512([value; 16]);
         let data = vec![zero; register_count];
 
         Self {
@@ -90,27 +94,27 @@ impl<const D: usize> Array<D> {
     }
 
     pub fn random_uniform(shape: &[usize; D], min: f32, max: f32, seed: Option<u64>) -> Self {
+        let mut new_array = Self::zeros(shape);
+        new_array.random_uniform_in_place(min, max, seed);
+
+        new_array
+    }
+
+    pub fn random_uniform_in_place(&mut self, min: f32, max: f32, seed: Option<u64>) {
         let mut rng = match seed {
             Some(seed) => ChaCha20Rng::seed_from_u64(seed),
             None => ChaCha20Rng::from_entropy(),
         };
 
         let distribution = Uniform::new(min, max);
-        let register_count = calculate_register_count(shape);
-        let mut data = Vec::with_capacity(register_count);
         let mut tmp_register_data = [0.0; 16];
 
-        for _ in 0..register_count {
+        for d in self.data.iter_mut() {
             for i in 0..16 {
                 tmp_register_data[i] = distribution.sample(&mut rng);
             }
 
-            data.push(array_to_m512(tmp_register_data));
-        }
-
-        Self {
-            data,
-            shape: *shape
+            *d = array_to_m512(tmp_register_data);
         }
     }
 
