@@ -64,6 +64,26 @@ fn zeros2d() {
 }
 
 #[test]
+fn from_value1d() {
+    for i in 0..64 {
+        let array: Vec<f32> = Array::new_from_value(&[i], 42.0).into();
+
+        assert_eq!(array, vec![42.0; i]);
+    }
+}
+
+#[test]
+fn from_value2d() {
+    for i in 0..32 {
+        for j in 0..32 {
+            let array: Vec<f32> = Array::new_from_value(&[i, j], 42.0).into();
+
+            assert_eq!(array, vec![42.0; i * j]);
+        }
+    }
+}
+
+#[test]
 fn random1d() {
     for i in 0..64 {
         let array: Vec<f32> = Array::random_uniform(&[i], -1.0, 1.0, Some(0)).into();

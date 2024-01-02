@@ -74,6 +74,13 @@ impl<const D: usize> Array<D> {
         }
     }
 
+    pub fn new_from_value(shape: &[usize; D], value: f32) -> Self {
+        Self {
+            data: vec![value; calculate_size(shape)],
+            shape: *shape,
+        }
+    }
+
     pub fn random_uniform(shape: &[usize; D], min: f32, max: f32, seed: Option<u64>) -> Self {
         let mut rng = match seed {
             Some(seed) => ChaCha20Rng::seed_from_u64(seed),
