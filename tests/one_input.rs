@@ -16,7 +16,7 @@ limitations under the License.
 
 mod utils;
 
-use fast_arrays::Array;
+use fast_arrays::{Array, Mask};
 use utils::{assert_approximate, get_random_f32_vec};
 
 use rstest::rstest;
@@ -36,6 +36,33 @@ fn in_place(#[case] test_function: fn(&mut Array<1>), #[case] target_function: f
 
         for (d, r) in data1.iter().zip(result.iter()) {
             assert_approximate(*r, target_function(*d), 0.001);
+        }
+    }
+}
+
+#[rstest]
+#[case::sqrt(Array::sqrt_in_place_masked, f32::sqrt)]
+#[case::square(Array::square_in_place_masked, |x| x * x)]
+#[case::abs(Array::abs_in_place_masked, f32::abs)]
+// #[case::exp(Array1D::exp_in_place, f32::exp)]
+fn in_place_masked(#[case] test_function: fn(&mut Array<1>, &Mask<1>), #[case] target_function: fn(f32) -> f32) {
+    for i in 0..64 {
+        let data1 = get_random_f32_vec(0, i);
+        let mut array1: Array<1> = data1.clone().into();
+
+        let data2 = get_random_f32_vec(1, i);
+        let array2: Array<1> = data2.clone().into();
+        let mask = array1.compare_greater_than(&array2);
+
+        test_function(&mut array1, &mask);
+        let result: Vec<f32> = array1.into();
+
+        for ((d, r), t) in data1.iter().zip(result.iter()).zip(data2.iter()) {
+            if *d > *t {
+                assert_approximate(*r, target_function(*d), 0.001);
+            } else {
+                assert_eq!(*r, *d);
+            }
         }
     }
 }

@@ -18,7 +18,7 @@ mod utils;
 
 use std::ops::{Add, Sub, Mul, Div};
 
-use fast_arrays::Array;
+use fast_arrays::{Array, Mask};
 use utils::get_random_f32_vec;
 
 use rstest::rstest;
@@ -59,6 +59,54 @@ fn in_place_shape_mismatch(#[case] test_function: fn(&mut Array<1>, &Array<1>)) 
     let mut array1: Array<1> = get_random_f32_vec(0, 3).into();
     let array2: Array<1> = get_random_f32_vec(1, 4).into();
     let _ = test_function(&mut array1, &array2);
+}
+
+#[rstest]
+#[case::add(Array::add_in_place_masked, f32::add)]
+#[case::sub(Array::sub_in_place_masked, f32::sub)]
+#[case::mul(Array::mul_in_place_masked, f32::mul)]
+#[case::div(Array::div_in_place_masked, f32::div)]
+#[case::max(Array::max_in_place_masked, f32::max)]
+#[case::min(Array::min_in_place_masked, f32::min)]
+fn in_place_masked(#[case] test_function: fn(&mut Array<1>, &Array<1>, mask: &Mask<1>), #[case] target_function: fn(f32, f32) -> f32) {
+    for i in 0..64 {
+        let data1 = get_random_f32_vec(0, i);
+        let data2 = get_random_f32_vec(1, i);
+
+        let mut array1: Array<1> = data1.clone().into();
+        let array2: Array<1> = data2.clone().into();
+        let gt = array1.compare_greater_than(&array2);
+
+        test_function(&mut array1, &array2, &gt);
+        let result: Vec<f32> = array1.into();
+
+        for ((d1, d2), r) in data1.iter().zip(data2.iter()).zip(result.iter()) {
+            if d1 > d2 {
+                assert_eq!(*r, target_function(*d1, *d2));
+            } else {
+                assert_eq!(*r, *d1);
+            }
+        }
+    }
+}
+
+#[rstest]
+#[case::add(Array::add_in_place_masked)]
+#[case::sub(Array::sub_in_place_masked)]
+#[case::mul(Array::mul_in_place_masked)]
+#[case::div(Array::div_in_place_masked)]
+#[case::max(Array::max_in_place_masked)]
+#[case::min(Array::min_in_place_masked)]
+#[should_panic]
+fn in_place_masked_shape_mismatch(#[case] test_function: fn(&mut Array<1>, &Array<1>, &Mask<1>)) {
+    let mut array1: Array<1> = get_random_f32_vec(0, 3).into();
+    let array2: Array<1> = get_random_f32_vec(1, 3).into();
+
+    let array3: Array<1> = get_random_f32_vec(0, 4).into();
+    let array4: Array<1> = get_random_f32_vec(1, 4).into();
+    let mask = array3.compare_greater_than(&array4);
+
+    let _ = test_function(&mut array1, &array2, &mask);
 }
 
 #[rstest]
@@ -115,6 +163,33 @@ fn in_place_scalar(#[case] test_function: fn(&mut Array<1>, f32), #[case] target
 
         for (d, r) in data1.iter().zip(result.iter()) {
             assert_eq!(*r, target_function(*d, scalar));
+        }
+    }
+}
+
+#[rstest]
+#[case::add(Array::add_scalar_in_place_masked, f32::add)]
+#[case::sub(Array::sub_scalar_in_place_masked, f32::sub)]
+#[case::mul(Array::mul_scalar_in_place_masked, f32::mul)]
+#[case::div(Array::div_scalar_in_place_masked, f32::div)]
+fn in_place_scalar_masked(#[case] test_function: fn(&mut Array<1>, f32, &Mask<1>), #[case] target_function: fn(f32, f32) -> f32) {
+    for i in 0..64 {
+        let data1 = get_random_f32_vec(0, i);
+        let scalar = 4.2f32;
+
+        let mut array1: Array<1> = data1.clone().into();
+        let array2 = Array::<1>::zeros(&[i]);
+        let mask = array1.compare_greater_than(&array2);
+
+        test_function(&mut array1, scalar, &mask);
+        let result: Vec<f32> = array1.into();
+
+        for (d, r) in data1.iter().zip(result.iter()) {
+            if *d > 0.0 {
+                assert_eq!(*r, target_function(*d, scalar));
+            } else {
+                assert_eq!(*r, *d);
+            }
         }
     }
 }
