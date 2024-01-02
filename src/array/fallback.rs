@@ -50,9 +50,20 @@ fn assert_same_shape2<const D: usize>(a: &Array<D>, b: &Array<D>) {
     assert_eq!(a.shape, b.shape, "the lengths of array one and two don't match: {:?} != {:?}", a.shape, b.shape);
 }
 
+fn assert_same_shape_with_mask2<const D: usize>(a: &Array<D>, b: &Array<D>, mask: &Mask<D>) {
+    assert_eq!(a.shape, b.shape, "the lengths of array one and two don't match: {:?} != {:?}", a.shape, b.shape);
+    assert_eq!(a.shape, mask.shape, "the lengths of array one and mask don't match: {:?} != {:?}", a.shape, mask.shape);
+}
+
 fn assert_same_shape3<const D: usize>(a: &Array<D>, b: &Array<D>, c: &Array<D>) {
     assert_eq!(a.shape, b.shape, "the lengths of array one and two don't match: {:?} != {:?}", a.shape, b.shape);
     assert_eq!(b.shape, c.shape, "the lengths of array two and three don't match: {:?} != {:?}", b.shape, c.shape);
+}
+
+fn assert_same_shape_with_mask3<const D: usize>(a: &Array<D>, b: &Array<D>, c: &Array<D>, mask: &Mask<D>) {
+    assert_eq!(a.shape, b.shape, "the lengths of array one and two don't match: {:?} != {:?}", a.shape, b.shape);
+    assert_eq!(b.shape, c.shape, "the lengths of array two and three don't match: {:?} != {:?}", b.shape, c.shape);
+    assert_eq!(a.shape, mask.shape, "the lengths of array one and mask don't match: {:?} != {:?}", a.shape, mask.shape);
 }
 
 impl<const D: usize> Array<D> {
@@ -98,6 +109,16 @@ impl<const D: usize> Array<D> {
         }
     }
 
+    pub fn add_in_place_masked(&mut self, other: &Self, mask: &Mask<D>) {
+        assert_same_shape_with_mask2(&self, &other, mask);
+
+        for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.masks.iter()) {
+            if *m {
+                *l = *l + *r;
+            }
+        }
+    }
+
     pub fn sub(&self, other: &Self) -> Self {
         let mut new_array = self.clone();
         new_array.sub_in_place(other);
@@ -110,6 +131,16 @@ impl<const D: usize> Array<D> {
 
         for (l, r) in self.data.iter_mut().zip(other.data.iter()) {
             *l = *l - *r;
+        }
+    }
+
+    pub fn sub_in_place_masked(&mut self, other: &Self, mask: &Mask<D>) {
+        assert_same_shape_with_mask2(&self, &other, mask);
+
+        for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.masks.iter()) {
+            if *m {
+                *l = *l - *r;
+            }
         }
     }
 
@@ -128,6 +159,16 @@ impl<const D: usize> Array<D> {
         }
     }
 
+    pub fn mul_in_place_masked(&mut self, other: &Self, mask: &Mask<D>) {
+        assert_same_shape_with_mask2(&self, &other, mask);
+
+        for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.masks.iter()) {
+            if *m {
+                *l = *l * *r;
+            }
+        }
+    }
+
     pub fn div(&self, other: &Self) -> Self {
         let mut new_array = self.clone();
         new_array.div_in_place(other);
@@ -140,6 +181,16 @@ impl<const D: usize> Array<D> {
 
         for (l, r) in self.data.iter_mut().zip(other.data.iter()) {
             *l = *l / *r;
+        }
+    }
+
+    pub fn div_in_place_masked(&mut self, other: &Self, mask: &Mask<D>) {
+        assert_same_shape_with_mask2(&self, &other, mask);
+
+        for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.masks.iter()) {
+            if *m {
+                *l = *l / *r;
+            }
         }
     }
 
@@ -158,6 +209,16 @@ impl<const D: usize> Array<D> {
         }
     }
 
+    pub fn max_in_place_masked(&mut self, other: &Self, mask: &Mask<D>) {
+        assert_same_shape_with_mask2(&self, &other, mask);
+
+        for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.masks.iter()) {
+            if *m {
+                *l = l.max(*r);
+            }
+        }
+    }
+
     pub fn min(&self, other: &Self) -> Self {
         let mut new_array = self.clone();
         new_array.min_in_place(other);
@@ -170,6 +231,16 @@ impl<const D: usize> Array<D> {
 
         for (l, r) in self.data.iter_mut().zip(other.data.iter()) {
             *l = l.min(*r);
+        }
+    }
+
+    pub fn min_in_place_masked(&mut self, other: &Self, mask: &Mask<D>) {
+        assert_same_shape_with_mask2(&self, &other, mask);
+
+        for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.masks.iter()) {
+            if *m {
+                *l = l.min(*r);
+            }
         }
     }
 
@@ -186,6 +257,14 @@ impl<const D: usize> Array<D> {
         }
     }
 
+    pub fn add_scalar_in_place_masked(&mut self, scalar: f32, mask: &Mask<D>) {
+        for (d, m) in self.data.iter_mut().zip(mask.masks.iter()) {
+            if *m {
+                *d = *d + scalar;
+            }
+        }
+    }
+
     pub fn sub_scalar(&self, scalar: f32) -> Self {
         let mut new_array = self.clone();
         new_array.sub_scalar_in_place(scalar);
@@ -196,6 +275,14 @@ impl<const D: usize> Array<D> {
     pub fn sub_scalar_in_place(&mut self, scalar: f32) {
         for d in self.data.iter_mut() {
             *d = *d - scalar;
+        }
+    }
+
+    pub fn sub_scalar_in_place_masked(&mut self, scalar: f32, mask: &Mask<D>) {
+        for (d, m) in self.data.iter_mut().zip(mask.masks.iter()) {
+            if *m {
+                *d = *d - scalar;
+            }
         }
     }
 
@@ -212,6 +299,14 @@ impl<const D: usize> Array<D> {
         }
     }
 
+    pub fn mul_scalar_in_place_masked(&mut self, scalar: f32, mask: &Mask<D>) {
+        for (d, m) in self.data.iter_mut().zip(mask.masks.iter()) {
+            if *m {
+                *d = *d * scalar;
+            }
+        }
+    }
+
     pub fn div_scalar(&self, scalar: f32) -> Self {
         let mut new_array = self.clone();
         new_array.div_scalar_in_place(scalar);
@@ -222,6 +317,14 @@ impl<const D: usize> Array<D> {
     pub fn div_scalar_in_place(&mut self, scalar: f32) {
         for d in self.data.iter_mut() {
             *d = *d / scalar;
+        }
+    }
+
+    pub fn div_scalar_in_place_masked(&mut self, scalar: f32, mask: &Mask<D>) {
+        for (d, m) in self.data.iter_mut().zip(mask.masks.iter()) {
+            if *m {
+                *d = *d / scalar;
+            }
         }
     }
 
@@ -240,6 +343,16 @@ impl<const D: usize> Array<D> {
         }
     }
 
+    pub fn fmadd_in_place_masked(&mut self, a: &Self, b: &Self, mask: &Mask<D>)  {
+        assert_same_shape_with_mask3(self, a, b, mask);
+
+        for (((a, b), c), m) in a.data.iter().zip(b.data.iter()).zip(self.data.iter_mut()).zip(mask.masks.iter()) {
+            if *m {
+                *c = *a * *b + *c;
+            }
+        }
+    }
+
     pub fn sqrt(&self) -> Self {
         let mut new_array = self.clone();
         new_array.sqrt_in_place();
@@ -250,6 +363,14 @@ impl<const D: usize> Array<D> {
     pub fn sqrt_in_place(&mut self) {
         for d in self.data.iter_mut() {
             *d = d.sqrt();
+        }
+    }
+
+    pub fn sqrt_in_place_masked(&mut self, mask: &Mask<D>) {
+        for (d, m) in self.data.iter_mut().zip(mask.masks.iter()) {
+            if *m {
+                *d = d.sqrt();
+            }
         }
     }
 
@@ -266,6 +387,14 @@ impl<const D: usize> Array<D> {
         }
     }
 
+    pub fn square_in_place_masked(&mut self, mask: &Mask<D>) {
+        for (d, m) in self.data.iter_mut().zip(mask.masks.iter()) {
+            if *m {
+                *d = *d * *d;
+            }
+        }
+    }
+
     pub fn abs(&self) -> Self {
         let mut new_array = self.clone();
         new_array.abs_in_place();
@@ -276,6 +405,14 @@ impl<const D: usize> Array<D> {
     pub fn abs_in_place(&mut self) {
         for d in self.data.iter_mut() {
             *d = d.abs();
+        }
+    }
+
+    pub fn abs_in_place_masked(&mut self, mask: &Mask<D>) {
+        for (d, m) in self.data.iter_mut().zip(mask.masks.iter()) {
+            if *m {
+                *d = d.abs();
+            }
         }
     }
 
@@ -308,7 +445,7 @@ impl<const D: usize> Array<D> {
         }
 
         Mask {
-            data,
+            masks: data,
             shape: a.shape
         }
     }
@@ -366,6 +503,12 @@ impl Array<1> {
         }
 
         self.data[index] = value;
+    }
+
+    pub fn set_all(&mut self, value: f32) {
+        for v in self.data.iter_mut() {
+            *v = value;
+        }
     }
 
     pub fn dot_product(&self, other: &Self) -> f32 {
