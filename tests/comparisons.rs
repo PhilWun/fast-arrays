@@ -65,3 +65,24 @@ fn comparison_mismatched_shapes(#[case] test_function: fn(&Array<1>, &Array<1>) 
         assert_eq!(*r, target_function(d1, d2));
     }
 }
+
+#[rstest]
+#[case::eq(Array::compare_scalar_equal, f32::eq)]
+#[case::neq(Array::compare_scalar_not_equal, f32::ne)]
+#[case::gt(Array::compare_scalar_greater_than, f32::gt)]
+#[case::ge(Array::compare_scalar_greater_than_or_equal, f32::ge)]
+#[case::lt(Array::compare_scalar_less_than, f32::lt)]
+#[case::le(Array::compare_scalar_less_than_or_equal, f32::le)]
+fn comparison_scalar(#[case] test_function: fn(&Array<1>, f32) -> Mask<1>, #[case] target_function: fn(&f32, &f32) -> bool) {
+    for i in 0..64 {
+        let data = get_random_f32_vec(0, i);
+
+        let array: Array<1> = data.clone().into();
+
+        let result: Vec<bool> = test_function(&array, 0.0).into();
+
+        for (d, r) in data.iter().zip(result.iter()) {
+            assert_eq!(*r, target_function(d, &0.0));
+        }
+    }
+}

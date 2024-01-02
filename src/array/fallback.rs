@@ -450,28 +450,65 @@ impl<const D: usize> Array<D> {
         }
     }
 
+    fn compare_scalar(a: &Array<D>, scalar: f32, func: fn(&f32, &f32) -> bool) -> Mask<D> {
+        let mut data = Vec::with_capacity(a.data.len());
+
+        for d in a.data.iter() {
+            data.push(func(d, &scalar));
+        }
+
+        Mask {
+            masks: data,
+            shape: a.shape
+        }
+    }
+
     pub fn compare_equal(&self, other: &Self) -> Mask<D> {
         Self::compare(self, other, f32::eq)
+    }
+
+    pub fn compare_scalar_equal(&self, scalar: f32) -> Mask<D> {
+        Self::compare_scalar(self, scalar, f32::eq)
     }
 
     pub fn compare_not_equal(&self, other: &Self) -> Mask<D> {
         Self::compare(self, other, f32::ne)
     }
 
+    pub fn compare_scalar_not_equal(&self, scalar: f32) -> Mask<D> {
+        Self::compare_scalar(self, scalar, f32::ne)
+    }
+
     pub fn compare_greater_than(&self, other: &Self) -> Mask<D> {
         Self::compare(self, other, f32::gt)
+    }
+
+    pub fn compare_scalar_greater_than(&self, scalar: f32) -> Mask<D> {
+        Self::compare_scalar(self, scalar, f32::gt)
     }
 
     pub fn compare_greater_than_or_equal(&self, other: &Self) -> Mask<D> {
         Self::compare(self, other, f32::ge)
     }
 
+    pub fn compare_scalar_greater_than_or_equal(&self, scalar: f32) -> Mask<D> {
+        Self::compare_scalar(self, scalar, f32::ge)
+    }
+
     pub fn compare_less_than(&self, other: &Self) -> Mask<D> {
         Self::compare(self, other, f32::lt)
     }
 
+    pub fn compare_scalar_less_than(&self, scalar: f32) -> Mask<D> {
+        Self::compare_scalar(self, scalar, f32::lt)
+    }
+
     pub fn compare_less_than_or_equal(&self, other: &Self) -> Mask<D> {
         Self::compare(self, other, f32::le)
+    }
+
+    pub fn compare_scalar_less_than_or_equal(&self, scalar: f32) -> Mask<D> {
+        Self::compare_scalar(self, scalar, f32::le)
     }
 
     pub fn exp(&self) -> Self {

@@ -129,7 +129,6 @@ impl<const D: usize> Array<D> {
         }
     }
 
-    // TODO: add masked operations
     pub fn add(&self, other: &Self) -> Self {
         let mut new_array = self.clone();
         new_array.add_in_place(other);
@@ -496,7 +495,6 @@ impl<const D: usize> Array<D> {
         }
     }
 
-    // TODO: compare to scalar
     fn compare(a: &Array<D>, b: &Array<D>, func: unsafe fn(__m512, __m512) -> __mmask16) -> Mask<D> {
         assert_same_shape2(a, b);
         let mut masks = Vec::with_capacity(a.data.len());
@@ -513,28 +511,68 @@ impl<const D: usize> Array<D> {
         }
     }
 
+    fn compare_scalar(a: &Array<D>, scalar: f32, func: unsafe fn(__m512, __m512) -> __mmask16) -> Mask<D> {
+        let scalar = array_to_m512([scalar; 16]);
+        let mut masks = Vec::with_capacity(a.data.len());
+
+        unsafe {
+            for d in a.data.iter() {
+                masks.push(func(*d, scalar));
+            }
+        }
+
+        Mask {
+            masks,
+            shape: a.shape
+        }
+    }
+
     pub fn compare_equal(&self, other: &Self) -> Mask<D> {
         Self::compare(self, other, _mm512_cmpeq_ps_mask)
+    }
+
+    pub fn compare_scalar_equal(&self, scalar: f32) -> Mask<D> {
+        Self::compare_scalar(self, scalar, _mm512_cmpeq_ps_mask)
     }
 
     pub fn compare_not_equal(&self, other: &Self) -> Mask<D> {
         Self::compare(self, other, _mm512_cmpneq_ps_mask)
     }
 
+    pub fn compare_scalar_not_equal(&self, scalar: f32) -> Mask<D> {
+        Self::compare_scalar(self, scalar, _mm512_cmpneq_ps_mask)
+    }
+
     pub fn compare_greater_than(&self, other: &Self) -> Mask<D> {
         Self::compare(self, other, _mm512_cmpnle_ps_mask)
+    }
+
+    pub fn compare_scalar_greater_than(&self, scalar: f32) -> Mask<D> {
+        Self::compare_scalar(self, scalar, _mm512_cmpnle_ps_mask)
     }
 
     pub fn compare_greater_than_or_equal(&self, other: &Self) -> Mask<D> {
         Self::compare(self, other, _mm512_cmpnlt_ps_mask)
     }
 
+    pub fn compare_scalar_greater_than_or_equal(&self, scalar: f32) -> Mask<D> {
+        Self::compare_scalar(self, scalar, _mm512_cmpnlt_ps_mask)
+    }
+
     pub fn compare_less_than(&self, other: &Self) -> Mask<D> {
         Self::compare(self, other, _mm512_cmplt_ps_mask)
     }
 
+    pub fn compare_scalar_less_than(&self, scalar: f32) -> Mask<D> {
+        Self::compare_scalar(self, scalar, _mm512_cmplt_ps_mask)
+    }
+
     pub fn compare_less_than_or_equal(&self, other: &Self) -> Mask<D> {
         Self::compare(self, other, _mm512_cmple_ps_mask)
+    }
+
+    pub fn compare_scalar_less_than_or_equal(&self, scalar: f32) -> Mask<D> {
+        Self::compare_scalar(self, scalar, _mm512_cmple_ps_mask)
     }
     
     pub fn exp(&self) -> Self {
@@ -582,4 +620,6 @@ impl<const D: usize> Array<D> {
             }
         }
     }
+
+    // TODO: exp_in_place_masked
 }
