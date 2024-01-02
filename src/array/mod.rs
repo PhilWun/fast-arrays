@@ -14,8 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+use crate::Array;
+
 #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
 mod avx512f;
 
 #[cfg(not(all(target_arch = "x86_64", target_feature = "avx512f")))]
 mod fallback;
+
+impl<const D: usize> Array<D> {
+    pub fn get_shape(&self) -> [usize; D] {
+        self.shape
+    }
+}
