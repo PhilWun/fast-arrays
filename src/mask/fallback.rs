@@ -40,3 +40,44 @@ impl Mask<1> {
         }
     }
 }
+
+impl<const D: usize> Mask<D> {
+    pub fn and(&self, other: &Self) -> Self {
+        let mut clone = self.clone();
+        clone.and_in_place(other);
+
+        clone
+    }
+
+    pub fn and_in_place(&mut self, other: &Self) {
+        for (m1, m2) in self.masks.iter_mut().zip(other.masks.iter()) {
+            *m1 = *m1 & *m2;
+        }
+    }
+
+    pub fn or(&self, other: &Self) -> Self {
+        let mut clone = self.clone();
+        clone.or_in_place(other);
+
+        clone
+    }
+
+    pub fn or_in_place(&mut self, other: &Self) {
+        for (m1, m2) in self.masks.iter_mut().zip(other.masks.iter()) {
+            *m1 = *m1 | *m2;
+        }
+    }
+
+    pub fn not(&self) -> Self {
+        let mut clone = self.clone();
+        clone.not_in_place();
+
+        clone
+    }
+
+    pub fn not_in_place(&mut self) {
+        for m in self.masks.iter_mut() {
+            *m = !*m;
+        }
+    }
+}

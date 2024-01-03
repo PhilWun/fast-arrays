@@ -14,9 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use rand::{distributions::{Uniform, Distribution}, SeedableRng};
+use rand::{distributions::{Uniform, Distribution}, SeedableRng, Rng};
 use rand_chacha::ChaCha20Rng;
 
+#[allow(dead_code)]
 pub fn get_random_f32_vec(seed: u64, len: usize) -> Vec<f32> {
     let mut rng = ChaCha20Rng::seed_from_u64(seed);
     let distribution = Uniform::new(-10.0f32, 10.0f32);
@@ -24,6 +25,18 @@ pub fn get_random_f32_vec(seed: u64, len: usize) -> Vec<f32> {
 
     for _ in 0..len {
         data.push(distribution.sample(&mut rng));
+    }
+    
+    data
+}
+
+#[allow(dead_code)]
+pub fn get_random_bool_vec(seed: u64, len: usize) -> Vec<bool> {
+    let mut rng = ChaCha20Rng::seed_from_u64(seed);
+    let mut data = Vec::with_capacity(len);
+
+    for _ in 0..len {
+        data.push(rng.gen_bool(0.5));
     }
     
     data
