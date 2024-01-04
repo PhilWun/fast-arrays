@@ -101,6 +101,54 @@ impl<const D: usize> Array<D> {
         }
     }
 
+    /// set the elements to `value` where `mask` is 1
+    pub fn set_masked(&mut self, value: f32, mask: &Mask<D>) {
+        assert_eq!(self.shape, mask.shape); // TODO: add messages to asserts
+
+        for (d, m) in self.data.iter_mut().zip(mask.masks.iter()) {
+            if *m {
+                *d = value;
+            }
+        }
+    }
+
+    /// set the elements to `v1` where `mask` is 0 and to `v2` where `mask` is 1
+    pub fn set_masked2(&mut self, v1: f32, v2: f32, mask: &Mask<D>) {
+        assert_eq!(self.shape, mask.shape);
+
+        for (d, m) in self.data.iter_mut().zip(mask.masks.iter()) {
+            if *m {
+                *d = v2;
+            } else {
+                *d = v1;
+            }
+        }
+    }
+
+    // copy the elements from `other` where `mask` is 1
+    pub fn copy_masked(&mut self, other: &Array<D>, mask: &Mask<D>) {
+        assert_same_shape_with_mask2(&self, other, mask);
+
+        for ((d1, d2), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.masks.iter()) {
+            if *m {
+                *d1 = *d2;
+            }
+        }
+    }
+
+    // copy the elements from `other1` where `mask` is 0 and from `other2` where `mask` is 1
+    pub fn copy_masked2(&mut self, other1: &Array<D>, other2: &Array<D>, mask: &Mask<D>) {
+        assert_same_shape_with_mask3(&self, other1, other2, mask);
+
+        for (((d1, d2), d3), m) in self.data.iter_mut().zip(other1.data.iter()).zip(other2.data.iter()).zip(mask.masks.iter()) {
+            if *m {
+                *d1 = *d3;
+            } else {
+                *d1 = *d2;
+            }
+        }
+    }
+
     pub fn add(&self, other: &Self) -> Self {
         let mut new_array = self.clone();
         new_array.add_in_place(other);

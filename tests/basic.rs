@@ -16,8 +16,8 @@ limitations under the License.
 
 mod utils;
 
-use fast_arrays::Array;
-use utils::get_random_f32_vec;
+use fast_arrays::{Array, Mask};
+use utils::{get_random_f32_vec, get_random_bool_vec};
 
 #[test]
 fn conversion1d() {
@@ -156,4 +156,154 @@ fn set_all() {
 
         assert_eq!(new_data, vec![42.0f32; i]);
     }
+}
+
+#[test]
+fn set_masked() {
+    for i in 0..64 {
+        let data = get_random_f32_vec(0, i);
+        let mask_data = get_random_bool_vec(1, i);
+        let mut array: Array<1> = data.clone().into();
+        let mask: Mask<1> = mask_data.clone().into();
+
+        array.set_masked(42.0, &mask);
+
+        let result: Vec<f32> = array.into();
+
+        for ((r, d), m) in result.iter().zip(data.iter()).zip(mask_data.iter()) {
+            if *m {
+                assert_eq!(*r, 42.0);
+            } else {
+                assert_eq!(r, d);
+            }
+        }
+    }
+}
+
+#[test]
+#[should_panic]
+fn set_masked_mismatched_shapes() {
+    let data = get_random_f32_vec(0, 3);
+    let mask_data = get_random_bool_vec(1, 4);
+    let mut array: Array<1> = data.clone().into();
+    let mask: Mask<1> = mask_data.clone().into();
+
+    array.set_masked(42.0, &mask);
+}
+
+#[test]
+fn set_masked2() {
+    for i in 0..64 {
+        let data1 = get_random_f32_vec(0, i);
+        let mask_data = get_random_bool_vec(1, i);
+
+        let mut array1: Array<1> = data1.clone().into();
+        let mask: Mask<1> = mask_data.clone().into();
+
+        array1.set_masked2(42.0, 43.0, &mask);
+
+        let result: Vec<f32> = array1.into();
+
+        for (r, m) in result.iter().zip(mask_data.iter()) {
+            if *m {
+                assert_eq!(*r, 43.0);
+            } else {
+                assert_eq!(*r, 42.0);
+            }
+        }
+    }
+}
+
+#[test]
+#[should_panic]
+fn set_masked2_mismatched_shapes() {
+    let data1 = get_random_f32_vec(0, 3);
+    let mask_data = get_random_bool_vec(1, 4);
+
+    let mut array1: Array<1> = data1.clone().into();
+    let mask: Mask<1> = mask_data.clone().into();
+
+    array1.set_masked2(42.0, 43.0, &mask);
+}
+
+#[test]
+fn copy_masked() {
+    for i in 0..64 {
+        let data1 = get_random_f32_vec(0, i);
+        let data2 = get_random_f32_vec(1, i);
+        let mask_data = get_random_bool_vec(2, i);
+
+        let mut array1: Array<1> = data1.clone().into();
+        let array2: Array<1> = data2.clone().into();
+        let mask: Mask<1> = mask_data.clone().into();
+
+        array1.copy_masked(&array2, &mask);
+
+        let result: Vec<f32> = array1.into();
+
+        for (((r, m), d1), d2) in result.iter().zip(mask_data.iter()).zip(data1.iter()).zip(data2.iter()) {
+            if *m {
+                assert_eq!(*r, *d2);
+            } else {
+                assert_eq!(*r, *d1);
+            }
+        }
+    }
+}
+
+#[test]
+#[should_panic]
+fn copy_masked_mismatched_shapes() {
+    let data1 = get_random_f32_vec(0, 3);
+    let data2 = get_random_f32_vec(1, 4);
+    let mask_data = get_random_bool_vec(2, 5);
+
+    let mut array1: Array<1> = data1.clone().into();
+    let array2: Array<1> = data2.clone().into();
+    let mask: Mask<1> = mask_data.clone().into();
+
+    array1.copy_masked(&array2, &mask);
+}
+
+#[test]
+fn copy_masked2() {
+    for i in 0..64 {
+        let data1 = get_random_f32_vec(0, i);
+        let data2 = get_random_f32_vec(1, i);
+        let data3 = get_random_f32_vec(2, i);
+        let mask_data = get_random_bool_vec(3, i);
+
+        let mut array1: Array<1> = data1.clone().into();
+        let array2: Array<1> = data2.clone().into();
+        let array3: Array<1> = data3.clone().into();
+        let mask: Mask<1> = mask_data.clone().into();
+
+        array1.copy_masked2(&array2, &array3, &mask);
+
+        let result: Vec<f32> = array1.into();
+
+        for (((r, m), d2), d3) in result.iter().zip(mask_data.iter()).zip(data2.iter()).zip(data3.iter()) {
+            if *m {
+                assert_eq!(*r, *d3);
+            } else {
+                assert_eq!(*r, *d2);
+            }
+        }
+    }
+}
+
+#[test]
+#[should_panic]
+fn copy_masked2_mismatched_shapes() {
+    let data1 = get_random_f32_vec(0, 2);
+    let data2 = get_random_f32_vec(1, 3);
+    let data3 = get_random_f32_vec(2, 4);
+    let mask_data = get_random_bool_vec(3, 5);
+
+    let mut array1: Array<1> = data1.clone().into();
+    let array2: Array<1> = data2.clone().into();
+    let array3: Array<1> = data3.clone().into();
+    let mask: Mask<1> = mask_data.clone().into();
+
+    array1.copy_masked2(&array2, &array3, &mask);
 }

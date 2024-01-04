@@ -18,7 +18,7 @@ mod one_dimension;
 mod two_dimensions;
 
 use std::{
-    arch::x86_64::{__m512, _mm512_add_ps, _mm512_sub_ps, _mm512_mul_ps, _mm512_div_ps, _mm512_max_ps, _mm512_min_ps, _mm512_sqrt_ps, _mm512_fmadd_ps, _mm512_abs_ps, _mm512_cmpeq_ps_mask, _mm512_cmpneq_ps_mask, _mm512_cmpnle_ps_mask, _mm512_cmpnlt_ps_mask, _mm512_cmplt_ps_mask, _mm512_cmple_ps_mask, _mm512_mul_round_ps, _MM_FROUND_TO_NEAREST_INT, _MM_FROUND_NO_EXC, _mm512_cvtps_epi32, _mm512_slli_epi32, _mm512_castsi512_ps, _mm512_add_epi32, _mm512_castps_si512, __mmask16, _mm512_mask_add_ps, _mm512_mask_sub_ps, _mm512_mask_mul_ps, _mm512_mask_div_ps, _mm512_mask_max_ps, _mm512_mask_min_ps, _mm512_mask3_fmadd_ps, _mm512_mask_sqrt_ps, _mm512_mask_abs_ps},
+    arch::x86_64::{__m512, _mm512_add_ps, _mm512_sub_ps, _mm512_mul_ps, _mm512_div_ps, _mm512_max_ps, _mm512_min_ps, _mm512_sqrt_ps, _mm512_fmadd_ps, _mm512_abs_ps, _mm512_cmpeq_ps_mask, _mm512_cmpneq_ps_mask, _mm512_cmpnle_ps_mask, _mm512_cmpnlt_ps_mask, _mm512_cmplt_ps_mask, _mm512_cmple_ps_mask, _mm512_mul_round_ps, _MM_FROUND_TO_NEAREST_INT, _MM_FROUND_NO_EXC, _mm512_cvtps_epi32, _mm512_slli_epi32, _mm512_castsi512_ps, _mm512_add_epi32, _mm512_castps_si512, __mmask16, _mm512_mask_add_ps, _mm512_mask_sub_ps, _mm512_mask_mul_ps, _mm512_mask_div_ps, _mm512_mask_max_ps, _mm512_mask_min_ps, _mm512_mask3_fmadd_ps, _mm512_mask_sqrt_ps, _mm512_mask_abs_ps, _mm512_mask_blend_ps},
     simd::f32x16
 };
 
@@ -126,6 +126,55 @@ impl<const D: usize> Array<D> {
             }
 
             *d = array_to_m512(tmp_register_data);
+        }
+    }
+
+    /// set the elements to `value` where `mask` is 1
+    pub fn set_masked(&mut self, value: f32, mask: &Mask<D>) {
+        assert_eq!(self.shape, mask.shape); // TODO: add messages to asserts
+
+        let value_register = array_to_m512([value; 16]);
+
+        unsafe {
+            for (d, m) in self.data.iter_mut().zip(mask.masks.iter()) {
+                *d = _mm512_mask_blend_ps(*m, *d, value_register);
+            }
+        }
+    }
+
+    /// set the elements to `v1` where `mask` is 0 and to `v2` where `mask` is 1
+    pub fn set_masked2(&mut self, v1: f32, v2: f32, mask: &Mask<D>) {
+        assert_eq!(self.shape, mask.shape);
+
+        let v1_register = array_to_m512([v1; 16]);
+        let v2_register = array_to_m512([v2; 16]);
+
+        unsafe {
+            for (d, m) in self.data.iter_mut().zip(mask.masks.iter()) {
+                *d = _mm512_mask_blend_ps(*m, v1_register, v2_register);
+            }
+        }
+    }
+
+    // copy the elements from `other` where `mask` is 1
+    pub fn copy_masked(&mut self, other: &Array<D>, mask: &Mask<D>) {
+        assert_same_shape_with_mask2(&self, other, mask);
+
+        unsafe {
+            for ((d1, d2), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.masks.iter()) {
+                *d1 = _mm512_mask_blend_ps(*m, *d1, *d2);
+            }
+        }
+    }
+
+    // copy the elements from `other1` where `mask` is 0 and from `other2` where `mask` is 1
+    pub fn copy_masked2(&mut self, other1: &Array<D>, other2: &Array<D>, mask: &Mask<D>) {
+        assert_same_shape_with_mask3(&self, other1, other2, mask);
+
+        unsafe {
+            for (((d1, d2), d3), m) in self.data.iter_mut().zip(other1.data.iter()).zip(other2.data.iter()).zip(mask.masks.iter()) {
+                *d1 = _mm512_mask_blend_ps(*m, *d2, *d3);
+            }
         }
     }
 
