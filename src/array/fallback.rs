@@ -457,6 +457,14 @@ impl<const D: usize> Array<D> {
         }
     }
 
+    fn compare_in_place(a: &Array<D>, b: &Array<D>, mask: &mut Mask<D>, func: fn(&f32, &f32) -> bool) {
+        assert_same_shape_with_mask2(a, b, &mask);
+
+        for ((d1, d2), m) in a.data.iter().zip(b.data.iter()).zip(mask.masks.iter_mut()) {
+            *m = func(d1, d2);
+        }
+    }
+
     fn compare_scalar(a: &Array<D>, scalar: f32, func: fn(&f32, &f32) -> bool) -> Mask<D> {
         let mut data = Vec::with_capacity(a.data.len());
 
@@ -470,52 +478,108 @@ impl<const D: usize> Array<D> {
         }
     }
 
+    fn compare_scalar_in_place(a: &Array<D>, scalar: f32, mask: &mut Mask<D>, func: fn(&f32, &f32) -> bool) {
+        assert_eq!(a.shape, mask.shape);
+        
+        for (d, m) in a.data.iter().zip(mask.masks.iter_mut()) {
+            *m = func(d, &scalar);
+        }
+    }
+
     pub fn compare_equal(&self, other: &Self) -> Mask<D> {
         Self::compare(self, other, f32::eq)
+    }
+
+    pub fn compare_equal_in_place(&self, other: &Self, mask: &mut Mask<D>) {
+        Self::compare_in_place(self, other, mask, f32::eq)
     }
 
     pub fn compare_scalar_equal(&self, scalar: f32) -> Mask<D> {
         Self::compare_scalar(self, scalar, f32::eq)
     }
 
+    pub fn compare_scalar_equal_in_place(&self, scalar: f32, mask: &mut Mask<D>) {
+        Self::compare_scalar_in_place(self, scalar, mask, f32::eq)
+    }
+
     pub fn compare_not_equal(&self, other: &Self) -> Mask<D> {
         Self::compare(self, other, f32::ne)
+    }
+
+    pub fn compare_not_equal_in_place(&self, other: &Self, mask: &mut Mask<D>) {
+        Self::compare_in_place(self, other, mask, f32::ne)
     }
 
     pub fn compare_scalar_not_equal(&self, scalar: f32) -> Mask<D> {
         Self::compare_scalar(self, scalar, f32::ne)
     }
 
+    pub fn compare_scalar_not_equal_in_place(&self, scalar: f32, mask: &mut Mask<D>) {
+        Self::compare_scalar_in_place(self, scalar, mask, f32::ne)
+    }
+
     pub fn compare_greater_than(&self, other: &Self) -> Mask<D> {
         Self::compare(self, other, f32::gt)
+    }
+
+    pub fn compare_greater_than_in_place(&self, other: &Self, mask: &mut Mask<D>) {
+        Self::compare_in_place(self, other, mask, f32::gt)
     }
 
     pub fn compare_scalar_greater_than(&self, scalar: f32) -> Mask<D> {
         Self::compare_scalar(self, scalar, f32::gt)
     }
 
+    pub fn compare_scalar_greater_than_in_place(&self, scalar: f32, mask: &mut Mask<D>) {
+        Self::compare_scalar_in_place(self, scalar, mask, f32::gt)
+    }
+
     pub fn compare_greater_than_or_equal(&self, other: &Self) -> Mask<D> {
         Self::compare(self, other, f32::ge)
+    }
+
+    pub fn compare_greater_than_or_equal_in_place(&self, other: &Self, mask: &mut Mask<D>) {
+        Self::compare_in_place(self, other, mask, f32::ge)
     }
 
     pub fn compare_scalar_greater_than_or_equal(&self, scalar: f32) -> Mask<D> {
         Self::compare_scalar(self, scalar, f32::ge)
     }
 
+    pub fn compare_scalar_greater_than_or_equal_in_place(&self, scalar: f32, mask: &mut Mask<D>) {
+        Self::compare_scalar_in_place(self, scalar, mask, f32::ge)
+    }
+
     pub fn compare_less_than(&self, other: &Self) -> Mask<D> {
         Self::compare(self, other, f32::lt)
+    }
+
+    pub fn compare_less_than_in_place(&self, other: &Self, mask: &mut Mask<D>) {
+        Self::compare_in_place(self, other, mask, f32::lt)
     }
 
     pub fn compare_scalar_less_than(&self, scalar: f32) -> Mask<D> {
         Self::compare_scalar(self, scalar, f32::lt)
     }
 
+    pub fn compare_scalar_less_than_in_place(&self, scalar: f32, mask: &mut Mask<D>) {
+        Self::compare_scalar_in_place(self, scalar, mask, f32::lt)
+    }
+
     pub fn compare_less_than_or_equal(&self, other: &Self) -> Mask<D> {
         Self::compare(self, other, f32::le)
     }
 
+    pub fn compare_less_than_or_equal_in_place(&self, other: &Self, mask: &mut Mask<D>) {
+        Self::compare_in_place(self, other, mask, f32::le)
+    }
+
     pub fn compare_scalar_less_than_or_equal(&self, scalar: f32) -> Mask<D> {
         Self::compare_scalar(self, scalar, f32::le)
+    }
+
+    pub fn compare_scalar_less_than_or_equal_in_place(&self, scalar: f32, mask: &mut Mask<D>) {
+        Self::compare_scalar_in_place(self, scalar, mask, f32::le)
     }
 
     pub fn exp(&self) -> Self {
