@@ -39,6 +39,10 @@ impl Mask<1> {
             shape: [len]
         }
     }
+
+    pub fn get(&self, index: usize) -> bool {
+        self.masks[index]
+    }
 }
 
 impl<const D: usize> Mask<D> {

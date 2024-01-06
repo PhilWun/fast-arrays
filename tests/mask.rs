@@ -67,3 +67,15 @@ fn two_inputs(#[case] test_function: fn(&mut Mask<1>, &Mask<1>), #[case] target_
         }
     }
 }
+
+#[test]
+fn get() {
+    for i in 1..64 {
+        let data = get_random_bool_vec(0, i);
+        let converted: Mask<1> = data.clone().into();
+        
+        for j in 0..i {
+            assert_eq!(data[j], converted.get(j));
+        }
+    }
+}

@@ -74,6 +74,12 @@ impl Mask<1> {
             shape: [len]
         }
     }
+
+    pub fn get(&self, index: usize) -> bool {
+        let mask = self.masks[index / 16];
+
+        mask & (1 << (index % 16)) > 0
+    }
 }
 
 

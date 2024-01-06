@@ -408,6 +408,31 @@ impl<const D: usize> Array<D> {
         }
     }
 
+    pub fn fmadd_scalar(&self, a: &Self, scalar: f32) -> Self {
+        let mut new_array = self.clone();
+        new_array.fmadd_scalar_in_place(a, scalar);
+
+        new_array
+    }
+
+    pub fn fmadd_scalar_in_place(&mut self, a: &Self, scalar: f32)  {
+        assert_same_shape2(self, a);
+
+        for (a, b) in a.data.iter().zip(self.data.iter_mut()) {
+            *b = *a * scalar + *b;
+        }
+    }
+
+    pub fn fmadd_scalar_in_place_masked(&mut self, a: &Self, scalar: f32, mask: &Mask<D>)  {
+        assert_same_shape_with_mask2(self, a, mask);
+
+        for ((a, c), m) in a.data.iter().zip(self.data.iter_mut()).zip(mask.masks.iter()) {
+            if *m {
+                *c = *a * scalar + *c;
+            }
+        }
+    }
+
     pub fn sqrt(&self) -> Self {
         let mut new_array = self.clone();
         new_array.sqrt_in_place();

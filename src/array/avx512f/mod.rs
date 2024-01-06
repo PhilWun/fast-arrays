@@ -112,6 +112,7 @@ impl<const D: usize> Array<D> {
     }
 
     pub fn random_uniform_in_place(&mut self, min: f32, max: f32, seed: Option<u64>) {
+        // TODO: use AVX accelerated function to implement PRNG
         let mut rng = match seed {
             Some(seed) => ChaCha20Rng::seed_from_u64(seed),
             None => ChaCha20Rng::from_entropy(),
@@ -448,6 +449,7 @@ impl<const D: usize> Array<D> {
         }
     }
 
+    // TODO: add variant with scalar
     pub fn fmadd(&self, a: &Self, b: &Self) -> Self {
         let mut new_array = self.clone();
         new_array.fmadd_in_place(a, b);
@@ -471,6 +473,35 @@ impl<const D: usize> Array<D> {
         unsafe {
             for (((a, b), c), m) in a.data.iter().zip(b.data.iter()).zip(self.data.iter_mut()).zip(mask.masks.iter()) {
                 *c = _mm512_mask3_fmadd_ps(*a, *b, *c, *m);
+            }
+        }
+    }
+
+    pub fn fmadd_scalar(&self, a: &Self, scalar: f32) -> Self {
+        let mut new_array = self.clone();
+        new_array.fmadd_scalar_in_place(a, scalar);
+
+        new_array
+    }
+
+    pub fn fmadd_scalar_in_place(&mut self, a: &Self, scalar: f32)  {
+        assert_same_shape2(self, a);
+        let scalar_register = array_to_m512([scalar; 16]);
+
+        unsafe {
+            for (a, b) in a.data.iter().zip(self.data.iter_mut()) {
+                *b = _mm512_fmadd_ps(*a, scalar_register, *b);
+            }
+        }
+    }
+
+    pub fn fmadd_scalar_in_place_masked(&mut self, a: &Self, scalar: f32, mask: &Mask<D>)  {
+        assert_same_shape_with_mask2(self, a, mask);
+        let scalar_register = array_to_m512([scalar; 16]);
+
+        unsafe {
+            for ((a, b), m) in a.data.iter().zip(self.data.iter_mut()).zip(mask.masks.iter()) {
+                *b = _mm512_mask3_fmadd_ps(*a, scalar_register, *b, *m);
             }
         }
     }
@@ -544,7 +575,6 @@ impl<const D: usize> Array<D> {
         }
     }
 
-    // TODO: compare in-place
     fn compare(a: &Array<D>, b: &Array<D>, func: unsafe fn(__m512, __m512) -> __mmask16) -> Mask<D> {
         assert_same_shape2(a, b);
         let mut masks = Vec::with_capacity(a.data.len());
