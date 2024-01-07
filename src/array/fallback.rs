@@ -14,8 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use rand::{distributions::{Uniform, Distribution}, SeedableRng};
-use rand_chacha::ChaCha20Rng;
+use rand::prelude::*;
 
 use crate::{Array, Mask};
 
@@ -81,24 +80,42 @@ impl<const D: usize> Array<D> {
         }
     }
 
-    pub fn random_uniform(shape: &[usize; D], min: f32, max: f32, seed: Option<u64>) -> Self {
-        let mut rng = match seed {
-            Some(seed) => ChaCha20Rng::seed_from_u64(seed),
-            None => ChaCha20Rng::from_entropy(),
-        };
+    pub fn random_seed() -> [u32; 16] {
+        let mut rng = SmallRng::from_entropy();
+        let mut seed = [0; 16];
 
-        let distribution = Uniform::new(min, max);
-        let size = calculate_size(shape);
-        let mut data = Vec::with_capacity(size);
-
-        for _ in 0..size {
-            data.push(distribution.sample(&mut rng));
+        for i in 0..16 {
+            seed[i] = rng.next_u32();
         }
 
-        Self {
-            data,
-            shape: *shape
+        seed
+    }
+
+    pub fn random_uniform(shape: &[usize; D], seed: [u32; 16]) -> Self {
+        let mut new_array = Self::zeros(shape);
+        new_array.random_uniform_in_place(seed);
+
+        new_array
+    }
+
+    pub fn random_uniform_in_place(&mut self, seed: [u32; 16]) -> [u32; 16] {
+        let mut seed = seed;
+        let m: u32 = 0x7fffffff;
+        let a: u32 = 1103515245;
+        let c: u32 = 12345;
+        let factor = 1.0 / (1u32 << 31) as f32;
+
+        for (i, x) in self.data.iter_mut().enumerate() {
+            let mut tmp = a.wrapping_mul(seed[i % 16]);
+            tmp = tmp.wrapping_add(c);
+            tmp = tmp & m;
+            seed[i % 16] = tmp;
+
+            *x = tmp as f32;
+            *x = *x * factor;
         }
+
+        seed
     }
 
     /// set the elements to `value` where `mask` is 1

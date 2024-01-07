@@ -86,10 +86,10 @@ fn from_value2d() {
 #[test]
 fn random1d() {
     for i in 0..64 {
-        let array: Vec<f32> = Array::random_uniform(&[i], -1.0, 1.0, Some(0)).into();
+        let array: Vec<f32> = Array::random_uniform(&[i], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]).into();
 
         for v in array {
-            assert!(v >= -1.0 && v <= 1.0);
+            assert!(v >= 0.0 && v <= 1.0);
         }
     }
 }
@@ -98,10 +98,10 @@ fn random1d() {
 fn random2d() {
     for i in 0..32 {
         for j in 0..32 {
-            let array: Vec<f32> = Array::random_uniform(&[i, j], -1.0, 1.0, Some(0)).into();
+            let array: Vec<f32> = Array::random_uniform(&[i, j], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]).into();
 
             for v in array {
-                assert!(v >= -1.0 && v <= 1.0);
+                assert!(v >= 0.0 && v <= 1.0);
             }
         }
     }

@@ -18,12 +18,11 @@ mod one_dimension;
 mod two_dimensions;
 
 use std::{
-    arch::x86_64::{__m512, _mm512_add_ps, _mm512_sub_ps, _mm512_mul_ps, _mm512_div_ps, _mm512_max_ps, _mm512_min_ps, _mm512_sqrt_ps, _mm512_fmadd_ps, _mm512_abs_ps, _mm512_cmpeq_ps_mask, _mm512_cmpneq_ps_mask, _mm512_cmpnle_ps_mask, _mm512_cmpnlt_ps_mask, _mm512_cmplt_ps_mask, _mm512_cmple_ps_mask, _mm512_mul_round_ps, _MM_FROUND_TO_NEAREST_INT, _MM_FROUND_NO_EXC, _mm512_cvtps_epi32, _mm512_slli_epi32, _mm512_castsi512_ps, _mm512_add_epi32, _mm512_castps_si512, __mmask16, _mm512_mask_add_ps, _mm512_mask_sub_ps, _mm512_mask_mul_ps, _mm512_mask_div_ps, _mm512_mask_max_ps, _mm512_mask_min_ps, _mm512_mask3_fmadd_ps, _mm512_mask_sqrt_ps, _mm512_mask_abs_ps, _mm512_mask_blend_ps},
-    simd::f32x16
+    arch::x86_64::{__m512, _mm512_add_ps, _mm512_sub_ps, _mm512_mul_ps, _mm512_div_ps, _mm512_max_ps, _mm512_min_ps, _mm512_sqrt_ps, _mm512_fmadd_ps, _mm512_abs_ps, _mm512_cmpeq_ps_mask, _mm512_cmpneq_ps_mask, _mm512_cmpnle_ps_mask, _mm512_cmpnlt_ps_mask, _mm512_cmplt_ps_mask, _mm512_cmple_ps_mask, _mm512_mul_round_ps, _MM_FROUND_TO_NEAREST_INT, _MM_FROUND_NO_EXC, _mm512_cvtps_epi32, _mm512_slli_epi32, _mm512_castsi512_ps, _mm512_add_epi32, _mm512_castps_si512, __mmask16, _mm512_mask_add_ps, _mm512_mask_sub_ps, _mm512_mask_mul_ps, _mm512_mask_div_ps, _mm512_mask_max_ps, _mm512_mask_min_ps, _mm512_mask3_fmadd_ps, _mm512_mask_sqrt_ps, _mm512_mask_abs_ps, _mm512_mask_blend_ps, __m512i, _mm512_mullo_epi32, _mm512_cvtepu32_ps, _mm512_and_si512},
+    simd::{f32x16, u32x16}
 };
 
-use rand::{distributions::{Uniform, Distribution}, SeedableRng};
-use rand_chacha::ChaCha20Rng;
+use rand::prelude::*;
 
 use crate::{Array, Mask};
 
@@ -34,6 +33,16 @@ fn m512_to_array(value: __m512) -> [f32; 16] {
 
 fn array_to_m512(value: [f32; 16]) -> __m512 {
     let value: f32x16 = value.into();
+    value.into()
+}
+
+fn m512i_to_array(value: __m512i) -> [u32; 16] {
+    let value: u32x16 = value.into();
+    value.into()
+}
+
+fn array_to_m512i(value: [u32; 16]) -> __m512i {
+    let value: u32x16 = value.into();
     value.into()
 }
 
@@ -104,30 +113,44 @@ impl<const D: usize> Array<D> {
         }
     }
 
-    pub fn random_uniform(shape: &[usize; D], min: f32, max: f32, seed: Option<u64>) -> Self {
+    pub fn random_seed() -> [u32; 16] {
+        let mut rng = SmallRng::from_entropy();
+        let mut seed = [0; 16];
+
+        for i in 0..16 {
+            seed[i] = rng.next_u32();
+        }
+
+        seed
+    }
+
+    pub fn random_uniform(shape: &[usize; D], seed: [u32; 16]) -> Self {
         let mut new_array = Self::zeros(shape);
-        new_array.random_uniform_in_place(min, max, seed);
+        new_array.random_uniform_in_place(seed);
 
         new_array
     }
 
-    pub fn random_uniform_in_place(&mut self, min: f32, max: f32, seed: Option<u64>) {
-        // TODO: use AVX accelerated function to implement PRNG
-        let mut rng = match seed {
-            Some(seed) => ChaCha20Rng::seed_from_u64(seed),
-            None => ChaCha20Rng::from_entropy(),
-        };
+    pub fn random_uniform_in_place(&mut self, seed: [u32; 16]) -> [u32; 16] {
+        let mut seed = array_to_m512i(seed);
+        let m = array_to_m512i([0x7fffffff; 16]);
+        let a = array_to_m512i([1103515245; 16]);
+        let c = array_to_m512i([12345; 16]);
+        let factor = array_to_m512([1.0 / (1u32 << 31) as f32; 16]);
 
-        let distribution = Uniform::new(min, max);
-        let mut tmp_register_data = [0.0; 16];
+        unsafe {
+            for x in self.data.iter_mut() {
+                let mut tmp = _mm512_mullo_epi32(a, seed);
+                tmp = _mm512_add_epi32(tmp, c);
+                tmp = _mm512_and_si512(tmp, m);
+                seed = tmp;
 
-        for d in self.data.iter_mut() {
-            for i in 0..16 {
-                tmp_register_data[i] = distribution.sample(&mut rng);
+                *x = _mm512_cvtepu32_ps(seed);
+                *x = _mm512_mul_ps(*x, factor);
             }
-
-            *d = array_to_m512(tmp_register_data);
         }
+
+        m512i_to_array(seed)
     }
 
     /// set the elements to `value` where `mask` is 1

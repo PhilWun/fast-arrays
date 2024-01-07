@@ -1,6 +1,6 @@
 [package]
 name = "fast_arrays"
-version = "0.1.8"
+version = "0.1.9"
 edition = "2021"
 license = "Apache-2.0"
 description = "Can be used to perform vectorized calculations on arbitrarily sized 1D and 2D arrays with AVX-512 acceleration."
@@ -11,10 +11,6 @@ readme = "README.md"
 name = "fast_arrays"
 path = "src/lib.rs"
 
-[[bin]]
-name = "benchmark"
-path = "src/bin/benchmark.rs"
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [profile.test]
@@ -23,7 +19,7 @@ path = "src/bin/benchmark.rs"
 # debug = 0
 
 [dependencies]
-rand = "0.8.5"
+rand = { version = "0.8.5", features = ["small_rng"]}
 rand_chacha = "0.3.1"
 
 [dev-dependencies]
