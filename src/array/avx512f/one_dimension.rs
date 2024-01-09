@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use std::arch::x86_64::{__m512, _mm512_add_ps, _mm512_mask_add_ps, _mm512_reduce_add_ps, _mm512_mul_ps, _mm512_mask_mul_ps, _mm512_reduce_mul_ps};
+use std::arch::x86_64::{__m512, _mm512_add_ps, _mm512_mask_add_ps, _mm512_reduce_add_ps, _mm512_mul_ps, _mm512_mask_mul_ps, _mm512_reduce_mul_ps, _mm512_permutexvar_ps, _mm512_broadcastss_ps, _mm512_castps512_ps128};
 
-use crate::Array;
+use crate::{Array, array::avx512f::array_to_m512i};
 
 use super::{m512_to_array, array_to_m512, assert_same_shape2, reduce};
 
@@ -148,6 +148,45 @@ impl Array<1> {
             sum_register = _mm512_mask_add_ps(sum_register, last_register_mask, sum_register, _mm512_mul_ps(*self.data.last().unwrap(), *other.data.last().unwrap()));
 
             _mm512_reduce_add_ps(sum_register)
+        }
+    }
+
+    /// Copy the array `k`-times into `output`
+    pub fn tile_in_place(&self, k: usize, output: &mut Array<1>) {
+        assert!(self.shape[0] % 16 == 0, "the number of elements needs to be a multiple of 16");
+        assert_eq!(self.shape[0] * k, output.shape[0], "the number of elements in output must be k-times more than the elements in this array");
+
+        let self_registers = self.data.len();
+
+        for (i, d) in output.data.iter_mut().enumerate() {
+            *d = self.data[i % self_registers];
+        }
+    }
+
+    /// Repeat each element of the array `k`-times and store the result in `output`
+    pub fn repeat_in_place(&self, k: usize, output: &mut Array<1>) {
+        let self_len = self.shape[0];
+
+        assert!(self_len % 16 == 0, "the number of elements needs to be a multiple of 16");
+        assert!(k % 16 == 0, "k needs to be a multiple of 16");
+        assert_eq!(self_len * k, output.shape[0], "the number of elements in output must be k-times more than the elements in this array");
+
+        let permutation_indices = array_to_m512i([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0]);
+        let mut index = 0;
+
+        unsafe {
+            for i in 0..self.data.len() {
+                let mut register = self.data[i];
+
+                for _ in 0..16 {
+                    for _ in 0..k / 16 {
+                        output.data[index] = _mm512_broadcastss_ps(_mm512_castps512_ps128(register));
+                        index += 1;
+                    }
+
+                    register = _mm512_permutexvar_ps(permutation_indices, register);
+                }
+            }
         }
     }
 }

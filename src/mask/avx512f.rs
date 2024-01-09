@@ -80,6 +80,42 @@ impl Mask<1> {
 
         mask & (1 << (index % 16)) > 0
     }
+
+    /// Copy the mask `k`-times into `output`
+    pub fn tile_in_place(&self, k: usize, output: &mut Mask<1>) {
+        assert!(self.shape[0] % 16 == 0, "the number of elements needs to be a multiple of 16");
+        assert_eq!(self.shape[0] * k, output.shape[0], "the number of elements in output must be k-times more than the elements in this mask");
+
+        let self_masks = self.masks.len();
+
+        for (i, d) in output.masks.iter_mut().enumerate() {
+            *d = self.masks[i % self_masks];
+        }
+    }
+
+    /// Repeat each element of the mask `k`-times and store the result in `output`
+    pub fn repeat_in_place(&self, k: usize, output: &mut Mask<1>) {
+        let self_len = self.shape[0];
+
+        assert!(self_len % 16 == 0, "the number of elements needs to be a multiple of 16");
+        assert!(k % 16 == 0, "k needs to be a multiple of 16");
+        assert_eq!(self_len * k, output.shape[0], "the number of elements in output must be k-times more than the elements in this array");
+
+        let mut index = 0;
+
+        for i in 0..self.masks.len() {
+            let mask = self.masks[i];
+
+            for j in 0..16 {
+                let new_mask = ((mask >> j) & 1) * 0xFFFF;
+
+                for _ in 0..k / 16 {
+                    output.masks[index] = new_mask;
+                    index += 1;
+                }
+            }
+        }
+    }
 }
 
 

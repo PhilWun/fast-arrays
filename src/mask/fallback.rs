@@ -43,6 +43,31 @@ impl Mask<1> {
     pub fn get(&self, index: usize) -> bool {
         self.masks[index]
     }
+
+    /// Copy the mask `k`-times into `output`
+    pub fn tile_in_place(&self, k: usize, output: &mut Mask<1>) {
+        assert_eq!(self.shape[0] * k, output.shape[0], "the number of elements in output must be k-times more than the elements in this mask");
+        let self_masks = self.masks.len();
+
+        for (i, d) in output.masks.iter_mut().enumerate() {
+            *d = self.masks[i % self_masks];
+        }
+    }
+
+    /// Repeat each element of the mask `k`-times and store the result in `output`
+    pub fn repeat_in_place(&self, k: usize, output: &mut Mask<1>) {
+        assert_eq!(self.shape[0] * k, output.shape[0], "the number of elements in output must be k-times more than the elements in this array");
+        let mut index = 0;
+
+        for i in 0..self.masks.len() {
+            let mask = self.masks[i];
+
+            for _ in 0..k {
+                output.masks[index] = mask;
+                index += 1;
+            }
+        }
+    }
 }
 
 impl<const D: usize> Mask<D> {

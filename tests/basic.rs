@@ -307,3 +307,45 @@ fn copy_masked2_mismatched_shapes() {
 
     array1.copy_masked2(&array2, &array3, &mask);
 }
+
+#[test]
+fn tile_in_place() {
+    for i in 1..5 {
+        for j in 1..5 {
+            let n = i * 16;
+            let k = j * 16;
+            let data = get_random_f32_vec(0, n);
+            let mask: Array<1> = data.clone().into();
+            let mut output = Array::zeros(&[n * k]);
+
+            mask.tile_in_place(k, &mut output);
+
+            let output_data: Vec<f32> = output.into();
+
+            for (i, m) in output_data.iter().enumerate() {
+                assert_eq!(*m, data[i % n]);
+            }
+        }
+    }
+}
+
+#[test]
+fn repeat_in_place() {
+    for i in 1..5 {
+        for j in 1..5 {
+            let n = i * 16;
+            let k = j * 16;
+            let data = get_random_f32_vec(0, n);
+            let mask: Array<1> = data.clone().into();
+            let mut output = Array::zeros(&[n * k]);
+
+            mask.repeat_in_place(k, &mut output);
+
+            let output_data: Vec<f32> = output.into();
+
+            for (i, m) in output_data.iter().enumerate() {
+                assert_eq!(*m, data[i / k]);
+            }
+        }
+    }
+}

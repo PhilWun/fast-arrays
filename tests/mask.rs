@@ -79,3 +79,45 @@ fn get() {
         }
     }
 }
+
+#[test]
+fn tile_in_place() {
+    for i in 1..5 {
+        for j in 1..5 {
+            let n = i * 16;
+            let k = j * 16;
+            let data = get_random_bool_vec(0, n);
+            let mask: Mask<1> = data.clone().into();
+            let mut output = Mask::new(n * k);
+
+            mask.tile_in_place(k, &mut output);
+
+            let output_data: Vec<bool> = output.into();
+
+            for (i, m) in output_data.iter().enumerate() {
+                assert_eq!(*m, data[i % n]);
+            }
+        }
+    }
+}
+
+#[test]
+fn repeat_in_place() {
+    for i in 1..5 {
+        for j in 1..5 {
+            let n = i * 16;
+            let k = j * 16;
+            let data = get_random_bool_vec(0, n);
+            let mask: Mask<1> = data.clone().into();
+            let mut output = Mask::new(n * k);
+
+            mask.repeat_in_place(k, &mut output);
+
+            let output_data: Vec<bool> = output.into();
+
+            for (i, m) in output_data.iter().enumerate() {
+                assert_eq!(*m, data[i / k]);
+            }
+        }
+    }
+}

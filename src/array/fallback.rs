@@ -718,6 +718,38 @@ impl Array<1> {
 
         result
     }
+
+    /// Copy the array `k`-times into `output`
+    pub fn tile_in_place(&self, k: usize, output: &mut Array<1>) {
+        assert!(self.shape[0] % 16 == 0, "the number of elements needs to be a multiple of 16");
+        assert_eq!(self.shape[0] * k, output.shape[0], "the number of elements in output must be k-times more than the elements in this array");
+
+        let self_len = self.data.len();
+
+        for (i, d) in output.data.iter_mut().enumerate() {
+            *d = self.data[i % self_len];
+        }
+    }
+
+    /// Repeat each element of the array `k`-times and store the result in `output`
+    pub fn repeat_in_place(&self, k: usize, output: &mut Array<1>) {
+        let self_len = self.shape[0];
+
+        assert!(self_len % 16 == 0, "the number of elements needs to be a multiple of 16");
+        assert!(k % 16 == 0, "k needs to be a multiple of 16");
+        assert_eq!(self_len * k, output.shape[0], "the number of elements in output must be k-times more than the elements in this array");
+
+        let mut index = 0;
+
+        for i in 0..self.data.len() {
+            let value = self.data[i];
+
+            for _ in 0..k {
+                output.data[index] = value;
+                index += 1;
+            }
+        }
+    }
 }
 
 impl Array<2> {
