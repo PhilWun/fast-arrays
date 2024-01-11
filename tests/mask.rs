@@ -68,6 +68,20 @@ fn two_inputs(#[case] test_function: fn(&mut Mask<1>, &Mask<1>), #[case] target_
     }
 }
 
+#[rstest]
+#[case::and(Mask::and_in_place)]
+#[case::or(Mask::or_in_place)]
+#[should_panic]
+fn two_inputs_mismatched_shape(#[case] test_function: fn(&mut Mask<1>, &Mask<1>)) {
+    let data1 = get_random_bool_vec(0, 4);
+    let data2 = get_random_bool_vec(1, 5);
+
+    let mut array1: Mask<1> = data1.clone().into();
+    let array2: Mask<1> = data2.clone().into();
+
+    test_function(&mut array1, &array2);
+}
+
 #[test]
 fn get() {
     for i in 1..64 {
@@ -88,7 +102,7 @@ fn tile_in_place() {
             let k = j * 16;
             let data = get_random_bool_vec(0, n);
             let mask: Mask<1> = data.clone().into();
-            let mut output = Mask::new(n * k);
+            let mut output = Mask::zeros(n * k);
 
             mask.tile_in_place(k, &mut output);
 
@@ -109,7 +123,7 @@ fn repeat_in_place() {
             let k = j * 16;
             let data = get_random_bool_vec(0, n);
             let mask: Mask<1> = data.clone().into();
-            let mut output = Mask::new(n * k);
+            let mut output = Mask::zeros(n * k);
 
             mask.repeat_in_place(k, &mut output);
 

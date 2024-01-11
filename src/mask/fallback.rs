@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+use std::slice::IterMut;
+
 use crate::Mask;
 
 impl From<Mask<1>> for Vec<bool> {
@@ -33,7 +35,7 @@ impl From<Vec<bool>> for Mask<1> {
 }
 
 impl Mask<1> {
-    pub fn new(len: usize) -> Self {
+    pub fn zeros(len: usize) -> Self {
         Self {
             masks: vec![false; len],
             shape: [len]
@@ -70,7 +72,44 @@ impl Mask<1> {
     }
 }
 
+/// This struct is used to create a mutable iterator over the masks and automatically zero out unused elements afterwards.
+pub struct MutableMasks<'a, const D: usize> {
+    mask: &'a mut Mask<D>
+}
+
+impl<'a, const D: usize> MutableMasks<'a, D> {
+    pub fn iter_mut(&mut self) -> IterMut<bool> {
+        self.mask.masks.iter_mut()
+    }
+}
+
 impl<const D: usize> Mask<D> {
+    pub(crate) fn new_from_data(shape: [usize; D], masks: Vec<bool>) -> Mask<D> {
+        let mut n_masks = 1;
+
+        for i in 0..D {
+            n_masks *= shape[i];
+        }
+        
+        assert_eq!(n_masks, masks.len(), "length of masks does not equal the expected length");
+
+        Mask { masks: masks, shape: shape }
+    }
+
+    pub fn get_shape(&self) -> &[usize; D] {
+        &self.shape
+    }
+
+    pub(crate) fn get_masks(&self) -> &Vec<bool> {
+        &self.masks
+    }
+
+    pub fn get_masks_mut(&mut self) -> MutableMasks<D> {
+        MutableMasks {
+            mask: self
+        }
+    }
+
     pub fn and(&self, other: &Self) -> Self {
         let mut clone = self.clone();
         clone.and_in_place(other);
@@ -79,6 +118,8 @@ impl<const D: usize> Mask<D> {
     }
 
     pub fn and_in_place(&mut self, other: &Self) {
+        assert_eq!(self.shape, other.shape);
+
         for (m1, m2) in self.masks.iter_mut().zip(other.masks.iter()) {
             *m1 = *m1 & *m2;
         }
@@ -92,6 +133,8 @@ impl<const D: usize> Mask<D> {
     }
 
     pub fn or_in_place(&mut self, other: &Self) {
+        assert_eq!(self.shape, other.shape);
+        
         for (m1, m2) in self.masks.iter_mut().zip(other.masks.iter()) {
             *m1 = *m1 | *m2;
         }

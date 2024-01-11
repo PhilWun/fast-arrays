@@ -52,7 +52,7 @@ fn assert_same_shape2<const D: usize>(a: &Array<D>, b: &Array<D>) {
 
 fn assert_same_shape_with_mask2<const D: usize>(a: &Array<D>, b: &Array<D>, mask: &Mask<D>) {
     assert_eq!(a.shape, b.shape, "the lengths of array one and two don't match: {:?} != {:?}", a.shape, b.shape);
-    assert_eq!(a.shape, mask.shape, "the lengths of array one and mask don't match: {:?} != {:?}", a.shape, mask.shape);
+    assert_eq!(&a.shape, mask.get_shape(), "the lengths of array one and mask don't match: {:?} != {:?}", a.shape, mask.get_shape());
 }
 
 fn assert_same_shape3<const D: usize>(a: &Array<D>, b: &Array<D>, c: &Array<D>) {
@@ -63,7 +63,7 @@ fn assert_same_shape3<const D: usize>(a: &Array<D>, b: &Array<D>, c: &Array<D>) 
 fn assert_same_shape_with_mask3<const D: usize>(a: &Array<D>, b: &Array<D>, c: &Array<D>, mask: &Mask<D>) {
     assert_eq!(a.shape, b.shape, "the lengths of array one and two don't match: {:?} != {:?}", a.shape, b.shape);
     assert_eq!(b.shape, c.shape, "the lengths of array two and three don't match: {:?} != {:?}", b.shape, c.shape);
-    assert_eq!(a.shape, mask.shape, "the lengths of array one and mask don't match: {:?} != {:?}", a.shape, mask.shape);
+    assert_eq!(&a.shape, mask.get_shape(), "the lengths of array one and mask don't match: {:?} != {:?}", a.shape, mask.get_shape());
 }
 
 unsafe fn reduce(data: &[__m512], len: usize, default_value: f32, func: unsafe fn(__m512, __m512) -> __m512, mask_func: unsafe fn(__m512, __mmask16, __m512, __m512) -> __m512) -> __m512 {
@@ -155,12 +155,12 @@ impl<const D: usize> Array<D> {
 
     /// set the elements to `value` where `mask` is 1
     pub fn set_masked(&mut self, value: f32, mask: &Mask<D>) {
-        assert_eq!(self.shape, mask.shape); // TODO: add messages to asserts
+        assert_eq!(&self.shape, mask.get_shape()); // TODO: add messages to asserts
 
         let value_register = array_to_m512([value; 16]);
 
         unsafe {
-            for (d, m) in self.data.iter_mut().zip(mask.masks.iter()) {
+            for (d, m) in self.data.iter_mut().zip(mask.get_masks().iter()) {
                 *d = _mm512_mask_blend_ps(*m, *d, value_register);
             }
         }
@@ -168,13 +168,13 @@ impl<const D: usize> Array<D> {
 
     /// set the elements to `v1` where `mask` is 0 and to `v2` where `mask` is 1
     pub fn set_masked2(&mut self, v1: f32, v2: f32, mask: &Mask<D>) {
-        assert_eq!(self.shape, mask.shape);
+        assert_eq!(&self.shape, mask.get_shape());
 
         let v1_register = array_to_m512([v1; 16]);
         let v2_register = array_to_m512([v2; 16]);
 
         unsafe {
-            for (d, m) in self.data.iter_mut().zip(mask.masks.iter()) {
+            for (d, m) in self.data.iter_mut().zip(mask.get_masks().iter()) {
                 *d = _mm512_mask_blend_ps(*m, v1_register, v2_register);
             }
         }
@@ -185,7 +185,7 @@ impl<const D: usize> Array<D> {
         assert_same_shape_with_mask2(&self, other, mask);
 
         unsafe {
-            for ((d1, d2), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.masks.iter()) {
+            for ((d1, d2), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.get_masks().iter()) {
                 *d1 = _mm512_mask_blend_ps(*m, *d1, *d2);
             }
         }
@@ -196,7 +196,7 @@ impl<const D: usize> Array<D> {
         assert_same_shape_with_mask3(&self, other1, other2, mask);
 
         unsafe {
-            for (((d1, d2), d3), m) in self.data.iter_mut().zip(other1.data.iter()).zip(other2.data.iter()).zip(mask.masks.iter()) {
+            for (((d1, d2), d3), m) in self.data.iter_mut().zip(other1.data.iter()).zip(other2.data.iter()).zip(mask.get_masks().iter()) {
                 *d1 = _mm512_mask_blend_ps(*m, *d2, *d3);
             }
         }
@@ -223,7 +223,7 @@ impl<const D: usize> Array<D> {
         assert_same_shape_with_mask2(&self, &other, &mask);
 
         unsafe {
-            for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.masks.iter()) {
+            for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.get_masks().iter()) {
                 *l = _mm512_mask_add_ps(*l, *m, *l, *r);
             }
         }
@@ -250,7 +250,7 @@ impl<const D: usize> Array<D> {
         assert_same_shape_with_mask2(&self, &other, mask);
 
         unsafe {
-            for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.masks.iter()) {
+            for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.get_masks().iter()) {
                 *l = _mm512_mask_sub_ps(*l, *m, *l, *r);
             }
         }
@@ -277,7 +277,7 @@ impl<const D: usize> Array<D> {
         assert_same_shape_with_mask2(&self, &other, mask);
 
         unsafe {
-            for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.masks.iter()) {
+            for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.get_masks().iter()) {
                 *l = _mm512_mask_mul_ps(*l, *m, *l, *r);
             }
         }
@@ -304,7 +304,7 @@ impl<const D: usize> Array<D> {
         assert_same_shape_with_mask2(&self, &other, mask);
 
         unsafe {
-            for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.masks.iter()) {
+            for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.get_masks().iter()) {
                 *l = _mm512_mask_div_ps(*l, *m, *l, *r);
             }
         }
@@ -331,7 +331,7 @@ impl<const D: usize> Array<D> {
         assert_same_shape_with_mask2(&self, &other, mask);
 
         unsafe {
-            for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.masks.iter()) {
+            for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.get_masks().iter()) {
                 *l = _mm512_mask_max_ps(*l, *m, *l, *r);
             }
         }
@@ -358,7 +358,7 @@ impl<const D: usize> Array<D> {
         assert_same_shape_with_mask2(&self, &other, mask);
 
         unsafe {
-            for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.masks.iter()) {
+            for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.get_masks().iter()) {
                 *l = _mm512_mask_min_ps(*l, *m, *l, *r);
             }
         }
@@ -385,7 +385,7 @@ impl<const D: usize> Array<D> {
         let scalar = array_to_m512([scalar; 16]);
 
         unsafe {
-            for (l, m) in self.data.iter_mut().zip(mask.masks.iter()) {
+            for (l, m) in self.data.iter_mut().zip(mask.get_masks().iter()) {
                 *l = _mm512_mask_add_ps(*l, *m, *l, scalar);
             }
         }
@@ -412,7 +412,7 @@ impl<const D: usize> Array<D> {
         let scalar = array_to_m512([scalar; 16]);
 
         unsafe {
-            for (l, m) in self.data.iter_mut().zip(mask.masks.iter()) {
+            for (l, m) in self.data.iter_mut().zip(mask.get_masks().iter()) {
                 *l = _mm512_mask_sub_ps(*l, *m, *l, scalar);
             }
         }
@@ -439,7 +439,7 @@ impl<const D: usize> Array<D> {
         let scalar = array_to_m512([scalar; 16]);
 
         unsafe {
-            for (l, m) in self.data.iter_mut().zip(mask.masks.iter()) {
+            for (l, m) in self.data.iter_mut().zip(mask.get_masks().iter()) {
                 *l = _mm512_mask_mul_ps(*l, *m, *l, scalar);
             }
         }
@@ -466,13 +466,12 @@ impl<const D: usize> Array<D> {
         let scalar = array_to_m512([scalar; 16]);
 
         unsafe {
-            for (l, m) in self.data.iter_mut().zip(mask.masks.iter()) {
+            for (l, m) in self.data.iter_mut().zip(mask.get_masks().iter()) {
                 *l = _mm512_mask_div_ps(*l, *m, *l, scalar);
             }
         }
     }
 
-    // TODO: add variant with scalar
     pub fn fmadd(&self, a: &Self, b: &Self) -> Self {
         let mut new_array = self.clone();
         new_array.fmadd_in_place(a, b);
@@ -494,7 +493,7 @@ impl<const D: usize> Array<D> {
         assert_same_shape_with_mask3(self, a, b, mask);
 
         unsafe {
-            for (((a, b), c), m) in a.data.iter().zip(b.data.iter()).zip(self.data.iter_mut()).zip(mask.masks.iter()) {
+            for (((a, b), c), m) in a.data.iter().zip(b.data.iter()).zip(self.data.iter_mut()).zip(mask.get_masks().iter()) {
                 *c = _mm512_mask3_fmadd_ps(*a, *b, *c, *m);
             }
         }
@@ -523,7 +522,7 @@ impl<const D: usize> Array<D> {
         let scalar_register = array_to_m512([scalar; 16]);
 
         unsafe {
-            for ((a, b), m) in a.data.iter().zip(self.data.iter_mut()).zip(mask.masks.iter()) {
+            for ((a, b), m) in a.data.iter().zip(self.data.iter_mut()).zip(mask.get_masks().iter()) {
                 *b = _mm512_mask3_fmadd_ps(*a, scalar_register, *b, *m);
             }
         }
@@ -546,7 +545,7 @@ impl<const D: usize> Array<D> {
 
     pub fn sqrt_in_place_masked(&mut self, mask: &Mask<D>) {
         unsafe {
-            for (d, m) in self.data.iter_mut().zip(mask.masks.iter()) {
+            for (d, m) in self.data.iter_mut().zip(mask.get_masks().iter()) {
                 *d = _mm512_mask_sqrt_ps(*d, *m, *d);
             }
         }
@@ -569,7 +568,7 @@ impl<const D: usize> Array<D> {
 
     pub fn square_in_place_masked(&mut self, mask: &Mask<D>) {
         unsafe {
-            for (d, m) in self.data.iter_mut().zip(mask.masks.iter()) {
+            for (d, m) in self.data.iter_mut().zip(mask.get_masks().iter()) {
                 *d = _mm512_mask_mul_ps(*d, *m, *d, *d);
             }
         }
@@ -592,7 +591,7 @@ impl<const D: usize> Array<D> {
 
     pub fn abs_in_place_masked(&mut self, mask: &Mask<D>) {
         unsafe {
-            for (d, m) in self.data.iter_mut().zip(mask.masks.iter()) {
+            for (d, m) in self.data.iter_mut().zip(mask.get_masks().iter()) {
                 *d = _mm512_mask_abs_ps(*d, *m, *d);
             }
         }
@@ -608,17 +607,14 @@ impl<const D: usize> Array<D> {
             }
         }
 
-        Mask {
-            masks,
-            shape: a.shape
-        }
+        Mask::new_from_data(a.shape, masks)
     }
 
     fn compare_in_place(a: &Array<D>, b: &Array<D>, mask: &mut Mask<D>, func: unsafe fn(__m512, __m512) -> __mmask16) {
         assert_same_shape_with_mask2(a, b, mask);
 
         unsafe {
-            for ((d1, d2), m) in a.data.iter().zip(b.data.iter()).zip(mask.masks.iter_mut()) {
+            for ((d1, d2), m) in a.data.iter().zip(b.data.iter()).zip(mask.get_masks_mut().iter_mut()) {
                 *m = func(*d1, *d2);
             }
         }
@@ -634,18 +630,15 @@ impl<const D: usize> Array<D> {
             }
         }
 
-        Mask {
-            masks,
-            shape: a.shape
-        }
+        Mask::new_from_data(a.shape, masks)
     }
 
     fn compare_scalar_in_place(a: &Array<D>, scalar: f32, mask: &mut Mask<D>, func: unsafe fn(__m512, __m512) -> __mmask16) {
-        assert_eq!(a.shape, mask.shape);
+        assert_eq!(&a.shape, mask.get_shape());
         let scalar = array_to_m512([scalar; 16]);
 
         unsafe {
-            for (d, m) in a.data.iter().zip(mask.masks.iter_mut()) {
+            for (d, m) in a.data.iter().zip(mask.get_masks_mut().iter_mut()) {
                 *m = func(*d, scalar);
             }
         }

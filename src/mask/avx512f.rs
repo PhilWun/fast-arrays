@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use std::arch::x86_64::__mmask16;
+use std::{arch::x86_64::__mmask16, slice::IterMut};
 
 use crate::Mask;
 
@@ -65,7 +65,7 @@ impl From<Vec<bool>> for Mask<1> {
 }
 
 impl Mask<1> {
-    pub fn new(len: usize) -> Self {
+    pub fn zeros(len: usize) -> Self {
         let mask_count = len.div_ceil(16);
         let masks = vec![0u16; mask_count];
 
@@ -118,8 +118,75 @@ impl Mask<1> {
     }
 }
 
+/// This struct is used to create a mutable iterator over the masks and automatically zero out unused elements afterwards.
+pub struct MutableMasks<'a, const D: usize> {
+    mask: &'a mut Mask<D>
+}
+
+impl<'a, const D: usize> MutableMasks<'a, D> {
+    pub fn iter_mut(&mut self) -> IterMut<__mmask16> {
+        self.mask.masks.iter_mut()
+    }
+}
+
+impl<'a, const D: usize> Drop for MutableMasks<'a, D> {
+    fn drop(&mut self) {
+        self.mask.zero_out_unused_elements();
+    }
+}
 
 impl<const D: usize> Mask<D> {
+    pub fn new_from_data(shape: [usize; D], masks: Vec<__mmask16>) -> Mask<D> {
+        let masks_per_row = shape.last().unwrap().div_ceil(16);
+        let mut n_masks = masks_per_row;
+
+        for i in 0..D-1 {
+            n_masks *= shape[i];
+        }
+
+        assert_eq!(n_masks, masks.len(), "length of masks does not equal the expected length");
+
+        let mut new_mask = Mask { masks: masks, shape: shape };
+        new_mask.zero_out_unused_elements();
+
+        new_mask
+    }
+
+    pub fn get_shape(&self) -> &[usize; D] {
+        &self.shape
+    }
+
+    pub(crate) fn get_masks(&self) -> &Vec<__mmask16> {
+        &self.masks
+    }
+
+    /// set everything outside the bounds of the shape to zero
+    pub(crate) fn zero_out_unused_elements(&mut self) {
+        let out_of_bound_elements = 16 - (self.shape.last().unwrap() % 16);
+
+        if out_of_bound_elements == 16 {
+            return;
+        }
+
+        let out_of_bound_mask = 0xFFFF >> out_of_bound_elements;
+        let mut rows = 1;
+        let registers_per_row = self.shape.last().unwrap().div_ceil(16);
+
+        for s in 0..D-1 {
+            rows *= self.shape[s];
+        }
+
+        for r in 1..rows+1 {
+            self.masks[r * registers_per_row - 1] &= out_of_bound_mask;
+        }
+    }
+
+    pub fn get_masks_mut(&mut self) -> MutableMasks<D> {
+        MutableMasks {
+            mask: self
+        }
+    }
+
     pub fn and(&self, other: &Self) -> Self {
         let mut clone = self.clone();
         clone.and_in_place(other);
@@ -128,6 +195,8 @@ impl<const D: usize> Mask<D> {
     }
 
     pub fn and_in_place(&mut self, other: &Self) {
+        assert_eq!(self.shape, other.shape);
+
         for (m1, m2) in self.masks.iter_mut().zip(other.masks.iter()) {
             *m1 = *m1 & *m2;
         }
@@ -141,6 +210,8 @@ impl<const D: usize> Mask<D> {
     }
 
     pub fn or_in_place(&mut self, other: &Self) {
+        assert_eq!(self.shape, other.shape);
+
         for (m1, m2) in self.masks.iter_mut().zip(other.masks.iter()) {
             *m1 = *m1 | *m2;
         }
@@ -156,6 +227,133 @@ impl<const D: usize> Mask<D> {
     pub fn not_in_place(&mut self) {
         for m in self.masks.iter_mut() {
             *m = !*m;
+        }
+
+        self.zero_out_unused_elements();
+    }
+}
+
+mod tests {
+    #[allow(unused_imports)]
+    use super::Mask;
+
+    #[test]
+    fn zero_out_unused_elements_1d() {
+        for i in 1..64usize {
+            let n_masks = i.div_ceil(16);
+            let masks = vec![0xFFFF; n_masks];
+            let shape = [i];
+            let mut mask = Mask {
+                masks,
+                shape
+            };
+
+            mask.zero_out_unused_elements();
+
+            for j in 0..n_masks * 16 {
+                let expected_bit = if j < i {
+                    1
+                } else {
+                    0
+                };
+
+                let actual_bit = (mask.masks[j / 16] >> (j % 16)) & 1;
+
+                assert_eq!(expected_bit, actual_bit);
+            }
+        }
+    }
+
+    #[test]
+    fn zero_out_unused_elements_2d() {
+        for i in 1..64usize {
+            for j in 1..64usize {
+                let masks_per_row = j.div_ceil(16);
+                let masks = vec![0xFFFF; i * masks_per_row];
+                let shape = [i, j];
+                let mut mask = Mask {
+                    masks,
+                    shape
+                };
+
+                mask.zero_out_unused_elements();
+
+                for k in 0..i {
+                    for l in 0..masks_per_row * 16 {
+                        let expected_bit = if l < j {
+                            1
+                        } else {
+                            0
+                        };
+
+                        let actual_bit = (mask.masks[k * masks_per_row + (l / 16)] >> (l % 16)) & 1;
+
+                        assert_eq!(expected_bit, actual_bit);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn get_masks_mut_1d() {
+        for i in 1..64usize {
+            let n_masks = i.div_ceil(16);
+            let masks = vec![0xFFFF; n_masks];
+            let shape = [i];
+            let mut mask = Mask {
+                masks,
+                shape
+            };
+
+            for m in mask.get_masks_mut().iter_mut() {
+                *m = 0xFFFF;
+            }
+
+            for j in 0..n_masks * 16 {
+                let expected_bit = if j < i {
+                    1
+                } else {
+                    0
+                };
+
+                let actual_bit = (mask.masks[j / 16] >> (j % 16)) & 1;
+
+                assert_eq!(expected_bit, actual_bit);
+            }
+        }
+    }
+
+    #[test]
+    fn get_masks_mut_2d() {
+        for i in 1..64usize {
+            for j in 1..64usize {
+                let masks_per_row = j.div_ceil(16);
+                let masks = vec![0; i * masks_per_row];
+                let shape = [i, j];
+                let mut mask = Mask {
+                    masks,
+                    shape
+                };
+
+                for m in mask.get_masks_mut().iter_mut() {
+                    *m = 0xFFFF;
+                }
+
+                for k in 0..i {
+                    for l in 0..masks_per_row * 16 {
+                        let expected_bit = if l < j {
+                            1
+                        } else {
+                            0
+                        };
+
+                        let actual_bit = (mask.masks[k * masks_per_row + (l / 16)] >> (l % 16)) & 1;
+
+                        assert_eq!(expected_bit, actual_bit);
+                    }
+                }
+            }
         }
     }
 }

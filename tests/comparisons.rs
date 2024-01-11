@@ -81,7 +81,7 @@ fn comparison_in_place(#[case] test_function: fn(&Array<1>, &Array<1>, &mut Mask
         let array1: Array<1> = data1.clone().into();
         let array2: Array<1> = data2.clone().into();
 
-        let mut mask = Mask::<1>::new(i);
+        let mut mask = Mask::<1>::zeros(i);
         test_function(&array1, &array2, &mut mask);
 
         let result: Vec<bool> = mask.into();
@@ -107,7 +107,7 @@ fn comparison_mismatched_shapes_in_place(#[case] test_function: fn(&Array<1>, &A
     let array1: Array<1> = data1.clone().into();
     let array2: Array<1> = data2.clone().into();
 
-    let mut mask = Mask::<1>::new(5);
+    let mut mask = Mask::<1>::zeros(5);
     test_function(&array1, &array2, &mut mask);
 
     let result: Vec<bool> = mask.into();
@@ -150,7 +150,7 @@ fn comparison_scalar_in_place(#[case] test_function: fn(&Array<1>, f32, &mut Mas
         let data = get_random_f32_vec(0, i);
 
         let array: Array<1> = data.clone().into();
-        let mut mask = Mask::<1>::new(i);
+        let mut mask = Mask::<1>::zeros(i);
         test_function(&array, 0.0, &mut mask);
 
         let result: Vec<bool> = mask.into();
@@ -173,7 +173,7 @@ fn comparison_scalar_in_place_mismatched_shape(#[case] test_function: fn(&Array<
     let data = get_random_f32_vec(0, 3);
 
     let array: Array<1> = data.clone().into();
-    let mut mask = Mask::<1>::new(4);
+    let mut mask = Mask::<1>::zeros(4);
     test_function(&array, 0.0, &mut mask);
 
     let result: Vec<bool> = mask.into();

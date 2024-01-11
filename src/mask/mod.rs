@@ -15,7 +15,19 @@ limitations under the License.
 */
 
 #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
+use std::arch::x86_64::__mmask16;
+
+#[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
 mod avx512f;
 
 #[cfg(not(all(target_arch = "x86_64", target_feature = "avx512f")))]
 mod fallback;
+
+#[derive(Clone)]
+pub struct Mask<const D: usize> {
+    #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
+    masks: Vec<__mmask16>,
+    #[cfg(not(all(target_arch = "x86_64", target_feature = "avx512f")))]
+    masks: Vec<bool>,
+    shape: [usize; D],
+}
