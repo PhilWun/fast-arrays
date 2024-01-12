@@ -53,6 +53,7 @@ fn in_place_masked(#[case] test_function: fn(&mut Array<1>, &Mask<1>), #[case] t
         let data2 = get_random_f32_vec(1, i);
         let array2: Array<1> = data2.clone().into();
         let mask = array1.compare_greater_than(&array2);
+        mask.assert_invariants_satisfied();
 
         test_function(&mut array1, &mask);
         let result: Vec<f32> = array1.into();

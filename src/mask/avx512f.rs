@@ -116,6 +116,40 @@ impl Mask<1> {
             }
         }
     }
+
+    pub fn repeat_as_row_in_place(&self, k: usize, output: &mut Mask<2>) {
+        assert_eq!(output.shape[0], k);
+        assert_eq!(output.shape[1], self.shape[0]);
+
+        for (i, m) in output.masks.iter_mut().enumerate() {
+            *m = self.masks[i % self.shape[0]];
+        }
+    }
+
+    pub fn repeat_as_column_in_place(&self, k: usize, output: &mut Mask<2>) {
+        assert_eq!(output.shape[0], self.shape[0]);
+        assert_eq!(output.shape[1], k);
+
+        let masks_per_row = k.div_ceil(16);
+
+        for i in 0..output.shape[0] {
+            let mask = self.get(i) as __mmask16 * 0xFFFF;
+
+            for j in 0..masks_per_row {
+                output.masks[i * masks_per_row + j] = mask;
+            }
+        }
+
+        output.zero_out_unused_elements();
+    }
+}
+
+impl Mask<2> {
+    pub fn get(&self, row: usize, column: usize) -> bool {
+        let masks_per_row = self.shape[1].div_ceil(16);
+
+        self.masks[row * masks_per_row + (column / 16)] & (1 << (column % 16)) > 0
+    }
 }
 
 /// This struct is used to create a mutable iterator over the masks and automatically zero out unused elements afterwards.
@@ -160,6 +194,35 @@ impl<const D: usize> Mask<D> {
         &self.masks
     }
 
+    pub fn assert_invariants_satisfied(&self) {
+        // check number of masks
+        let masks_per_row = self.shape.last().unwrap().div_ceil(16);
+        let mut n_masks = masks_per_row;
+
+        for i in 0..D-1 {
+            n_masks *= self.shape[i];
+        }
+
+        assert_eq!(self.masks.len(), n_masks, "number of masks does not match the expected number");
+
+        // check that unused bits are 0
+        if self.shape.last().unwrap() % 16 == 0 {
+            return;
+        }
+
+        let masks_per_row = self.shape.last().unwrap().div_ceil(16);
+        let unused_elements_mask = 0xFFFF << (self.shape.last().unwrap() % 16);
+        let mut rows = 1;
+
+        for s in 0..D-1 {
+            rows *= self.shape[s];
+        }
+
+        for r in 1..rows+1 {
+            assert_eq!(self.masks[r * masks_per_row - 1] & unused_elements_mask, 0, "mask contains unused bits that are set to 1");
+        }
+    }
+
     /// set everything outside the bounds of the shape to zero
     pub(crate) fn zero_out_unused_elements(&mut self) {
         let out_of_bound_elements = 16 - (self.shape.last().unwrap() % 16);
@@ -170,14 +233,14 @@ impl<const D: usize> Mask<D> {
 
         let out_of_bound_mask = 0xFFFF >> out_of_bound_elements;
         let mut rows = 1;
-        let registers_per_row = self.shape.last().unwrap().div_ceil(16);
+        let masks_per_row = self.shape.last().unwrap().div_ceil(16);
 
         for s in 0..D-1 {
             rows *= self.shape[s];
         }
 
         for r in 1..rows+1 {
-            self.masks[r * registers_per_row - 1] &= out_of_bound_mask;
+            self.masks[r * masks_per_row - 1] &= out_of_bound_mask;
         }
     }
 
@@ -233,9 +296,66 @@ impl<const D: usize> Mask<D> {
     }
 }
 
+#[cfg(test)]
 mod tests {
+    use rstest::rstest;
+
     #[allow(unused_imports)]
     use super::Mask;
+
+    #[rstest]
+    #[should_panic]
+    fn unused_elements_are_zero_1d(#[values(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17)] rows: usize) {
+        let n_masks = rows.div_ceil(16);
+        let masks = vec![0xFFFF; n_masks];
+
+        let mask = Mask {
+            masks,
+            shape: [rows]
+        };
+
+        mask.assert_invariants_satisfied();
+    }
+
+    #[rstest]
+    #[should_panic]
+    fn number_of_elements_1d(#[values(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 33)] rows: usize) {
+        let masks = vec![0; 2];
+
+        let mask = Mask {
+            masks,
+            shape: [rows]
+        };
+
+        mask.assert_invariants_satisfied();
+    }
+
+    #[rstest]
+    #[should_panic]
+    fn unused_elements_are_zero_2d(#[values(1, 2, 3)] columns: usize, #[values(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17)] rows: usize) {
+        let n_masks = rows.div_ceil(16) * columns;
+        let masks = vec![0xFFFF; n_masks];
+
+        let mask = Mask {
+            masks,
+            shape: [rows]
+        };
+
+        mask.assert_invariants_satisfied();
+    }
+
+    #[rstest]
+    #[should_panic]
+    fn number_of_elements_2d(#[values(1, 2, 3)] columns: usize, #[values(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 33)] rows: usize) {
+        let masks = vec![0; 2 * columns];
+
+        let mask = Mask {
+            masks,
+            shape: [rows]
+        };
+
+        mask.assert_invariants_satisfied();
+    }
 
     #[test]
     fn zero_out_unused_elements_1d() {

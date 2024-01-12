@@ -76,6 +76,7 @@ fn in_place_masked(#[case] test_function: fn(&mut Array<1>, &Array<1>, mask: &Ma
         let mut array1: Array<1> = data1.clone().into();
         let array2: Array<1> = data2.clone().into();
         let gt = array1.compare_greater_than(&array2);
+        gt.assert_invariants_satisfied();
 
         test_function(&mut array1, &array2, &gt);
         let result: Vec<f32> = array1.into();
@@ -105,6 +106,7 @@ fn in_place_masked_shape_mismatch(#[case] test_function: fn(&mut Array<1>, &Arra
     let array3: Array<1> = get_random_f32_vec(0, 4).into();
     let array4: Array<1> = get_random_f32_vec(1, 4).into();
     let mask = array3.compare_greater_than(&array4);
+    mask.assert_invariants_satisfied();
 
     let _ = test_function(&mut array1, &array2, &mask);
 }

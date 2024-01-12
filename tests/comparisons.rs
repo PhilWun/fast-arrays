@@ -36,7 +36,9 @@ fn comparison(#[case] test_function: fn(&Array<1>, &Array<1>) -> Mask<1>, #[case
         let array1: Array<1> = data1.clone().into();
         let array2: Array<1> = data2.clone().into();
 
-        let result: Vec<bool> = test_function(&array1, &array2).into();
+        let result = test_function(&array1, &array2);
+        result.assert_invariants_satisfied();
+        let result: Vec<bool> = result.into();
 
         for ((d1, d2), r) in data1.iter().zip(data2.iter()).zip(result.iter()) {
             assert_eq!(*r, target_function(d1, d2));
@@ -59,7 +61,9 @@ fn comparison_mismatched_shapes(#[case] test_function: fn(&Array<1>, &Array<1>) 
     let array1: Array<1> = data1.clone().into();
     let array2: Array<1> = data2.clone().into();
 
-    let result: Vec<bool> = test_function(&array1, &array2).into();
+    let result = test_function(&array1, &array2);
+    result.assert_invariants_satisfied();
+    let result: Vec<bool> = result.into();
 
     for ((d1, d2), r) in data1.iter().zip(data2.iter()).zip(result.iter()) {
         assert_eq!(*r, target_function(d1, d2));
@@ -83,6 +87,7 @@ fn comparison_in_place(#[case] test_function: fn(&Array<1>, &Array<1>, &mut Mask
 
         let mut mask = Mask::<1>::zeros(i);
         test_function(&array1, &array2, &mut mask);
+        mask.assert_invariants_satisfied();
 
         let result: Vec<bool> = mask.into();
 
@@ -109,6 +114,7 @@ fn comparison_mismatched_shapes_in_place(#[case] test_function: fn(&Array<1>, &A
 
     let mut mask = Mask::<1>::zeros(5);
     test_function(&array1, &array2, &mut mask);
+    mask.assert_invariants_satisfied();
 
     let result: Vec<bool> = mask.into();
 
@@ -130,7 +136,9 @@ fn comparison_scalar(#[case] test_function: fn(&Array<1>, f32) -> Mask<1>, #[cas
 
         let array: Array<1> = data.clone().into();
 
-        let result: Vec<bool> = test_function(&array, 0.0).into();
+        let result = test_function(&array, 0.0);
+        result.assert_invariants_satisfied();
+        let result: Vec<bool> = result.into();
 
         for (d, r) in data.iter().zip(result.iter()) {
             assert_eq!(*r, target_function(d, &0.0));
@@ -152,6 +160,7 @@ fn comparison_scalar_in_place(#[case] test_function: fn(&Array<1>, f32, &mut Mas
         let array: Array<1> = data.clone().into();
         let mut mask = Mask::<1>::zeros(i);
         test_function(&array, 0.0, &mut mask);
+        mask.assert_invariants_satisfied();
 
         let result: Vec<bool> = mask.into();
 
@@ -175,6 +184,7 @@ fn comparison_scalar_in_place_mismatched_shape(#[case] test_function: fn(&Array<
     let array: Array<1> = data.clone().into();
     let mut mask = Mask::<1>::zeros(4);
     test_function(&array, 0.0, &mut mask);
+    mask.assert_invariants_satisfied();
 
     let result: Vec<bool> = mask.into();
 

@@ -315,10 +315,10 @@ fn tile_in_place() {
             let n = i * 16;
             let k = j * 16;
             let data = get_random_f32_vec(0, n);
-            let mask: Array<1> = data.clone().into();
+            let array: Array<1> = data.clone().into();
             let mut output = Array::zeros(&[n * k]);
 
-            mask.tile_in_place(k, &mut output);
+            array.tile_in_place(k, &mut output);
 
             let output_data: Vec<f32> = output.into();
 
@@ -336,10 +336,10 @@ fn repeat_in_place() {
             let n = i * 16;
             let k = j * 16;
             let data = get_random_f32_vec(0, n);
-            let mask: Array<1> = data.clone().into();
+            let array: Array<1> = data.clone().into();
             let mut output = Array::zeros(&[n * k]);
 
-            mask.repeat_in_place(k, &mut output);
+            array.repeat_in_place(k, &mut output);
 
             let output_data: Vec<f32> = output.into();
 

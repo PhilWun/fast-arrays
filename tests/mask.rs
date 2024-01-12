@@ -26,6 +26,7 @@ fn convert() {
     for i in 0..64 {
         let data = get_random_bool_vec(0, i);
         let converted: Mask<1> = data.clone().into();
+        converted.assert_invariants_satisfied();
         let converted_back: Vec<bool> = converted.into();
 
         assert_eq!(converted_back, data);
@@ -37,10 +38,13 @@ fn convert() {
 fn in_place(#[case] test_function: fn(&mut Mask<1>), #[case] target_function: fn(bool) -> bool) {
     for i in 0..64 {
         let data1 = get_random_bool_vec(0, i);
-        let mut array1: Mask<1> = data1.clone().into();
+        let mut mask: Mask<1> = data1.clone().into();
+        mask.assert_invariants_satisfied();
 
-        test_function(&mut array1);
-        let result: Vec<bool> = array1.into();
+        test_function(&mut mask);
+        mask.assert_invariants_satisfied();
+
+        let result: Vec<bool> = mask.into();
 
         for (d, r) in data1.iter().zip(result.iter()) {
             assert_eq!(*r, target_function(*d));
@@ -56,11 +60,14 @@ fn two_inputs(#[case] test_function: fn(&mut Mask<1>, &Mask<1>), #[case] target_
         let data1 = get_random_bool_vec(0, i);
         let data2 = get_random_bool_vec(1, i);
 
-        let mut array1: Mask<1> = data1.clone().into();
-        let array2: Mask<1> = data2.clone().into();
+        let mut mask1: Mask<1> = data1.clone().into();
+        mask1.assert_invariants_satisfied();
+        let mask2: Mask<1> = data2.clone().into();
+        mask2.assert_invariants_satisfied();
 
-        test_function(&mut array1, &array2);
-        let result: Vec<bool> = array1.into();
+        test_function(&mut mask1, &mask2);
+        mask1.assert_invariants_satisfied();
+        let result: Vec<bool> = mask1.into();
 
         for ((d1, d2), r) in data1.iter().zip(data2.iter()).zip(result.iter()) {
             assert_eq!(*r, target_function(*d1, *d2));
@@ -76,10 +83,13 @@ fn two_inputs_mismatched_shape(#[case] test_function: fn(&mut Mask<1>, &Mask<1>)
     let data1 = get_random_bool_vec(0, 4);
     let data2 = get_random_bool_vec(1, 5);
 
-    let mut array1: Mask<1> = data1.clone().into();
-    let array2: Mask<1> = data2.clone().into();
+    let mut mask1: Mask<1> = data1.clone().into();
+    mask1.assert_invariants_satisfied();
+    let mask2: Mask<1> = data2.clone().into();
+    mask2.assert_invariants_satisfied();
 
-    test_function(&mut array1, &array2);
+    test_function(&mut mask1, &mask2);
+    mask1.assert_invariants_satisfied();
 }
 
 #[test]
@@ -87,6 +97,7 @@ fn get() {
     for i in 1..64 {
         let data = get_random_bool_vec(0, i);
         let converted: Mask<1> = data.clone().into();
+        converted.assert_invariants_satisfied();
         
         for j in 0..i {
             assert_eq!(data[j], converted.get(j));
@@ -102,9 +113,12 @@ fn tile_in_place() {
             let k = j * 16;
             let data = get_random_bool_vec(0, n);
             let mask: Mask<1> = data.clone().into();
+            mask.assert_invariants_satisfied();
             let mut output = Mask::zeros(n * k);
+            output.assert_invariants_satisfied();
 
             mask.tile_in_place(k, &mut output);
+            output.assert_invariants_satisfied();
 
             let output_data: Vec<bool> = output.into();
 
@@ -123,9 +137,12 @@ fn repeat_in_place() {
             let k = j * 16;
             let data = get_random_bool_vec(0, n);
             let mask: Mask<1> = data.clone().into();
+            mask.assert_invariants_satisfied();
             let mut output = Mask::zeros(n * k);
+            output.assert_invariants_satisfied();
 
             mask.repeat_in_place(k, &mut output);
+            output.assert_invariants_satisfied();
 
             let output_data: Vec<bool> = output.into();
 
