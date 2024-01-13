@@ -16,7 +16,7 @@ limitations under the License.
 
 use std::arch::x86_64::{_mm512_add_ps, _mm512_mask_add_ps, _mm512_mul_ps, _mm512_mask_mul_ps, _mm512_reduce_add_ps, _mm512_reduce_mul_ps, _mm512_fmadd_ps, _mm512_mask3_fmadd_ps, __m512};
 
-use crate::Array;
+use crate::{Array, Mask};
 
 use super::{m512_to_array, array_to_m512, reduce};
 
@@ -292,6 +292,41 @@ impl Array<2> {
         Self {
             data: result_data,
             shape: [matrix_a.shape[0], matrix_b.shape[1]]
+        }
+    }
+
+    pub fn sum_to_row_in_place_masked(&self, mask: &Mask<2>, output: &mut Array<1>) {
+        assert_eq!(&self.shape, mask.get_shape());
+        assert_eq!(output.shape[0], self.shape[1]);
+
+        let registers_per_row = output.data.len();
+        output.set_all(0.0);
+
+        unsafe {
+            for (i, (d, m)) in self.data.iter().zip(mask.get_masks().iter()).enumerate() {
+                let output_register = &mut output.data[i % registers_per_row];
+                *output_register = _mm512_mask_add_ps(*output_register, *m, *d, *output_register);
+            }
+        }
+    }
+
+    pub fn sum_to_column_in_place_masked(&self, mask: &Mask<2>, output: &mut Array<1>) {
+        assert_eq!(&self.shape, mask.get_shape());
+        assert_eq!(output.shape[0], self.shape[0]);
+
+        let registers_per_row = self.shape[1].div_ceil(16);
+
+        unsafe {
+            for row in 0..self.shape[0] {
+                let mut sum_register = array_to_m512([0.0; 16]);
+                let data_range = row * registers_per_row..(row + 1) * registers_per_row;
+
+                for (register, mask) in self.data[data_range.clone()].iter().zip(mask.get_masks()[data_range].iter()) {
+                    sum_register = _mm512_mask_add_ps(sum_register, *mask, sum_register, *register);
+                }
+
+                output.set(row, _mm512_reduce_add_ps(sum_register));
+            }
         }
     }
 }

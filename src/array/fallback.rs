@@ -823,4 +823,32 @@ impl Array<2> {
             shape: [a_rows, b_columns],
         }
     }
+
+    pub fn sum_to_row_in_place_masked(&self, mask: &Mask<2>, output: &mut Array<1>) {
+        assert_eq!(&self.shape, mask.get_shape());
+        assert_eq!(output.shape[0], self.shape[1]);
+
+        output.set_all(0.0);
+
+        for (i, (d, m)) in self.data.iter().zip(mask.get_masks().iter()).enumerate() {
+            if *m {
+                output.data[i % output.shape[0]] += d;
+            }
+        }
+    }
+
+    pub fn sum_to_column_in_place_masked(&self, mask: &Mask<2>, output: &mut Array<1>) {
+        assert_eq!(&self.shape, mask.get_shape());
+        assert_eq!(output.shape[0], self.shape[0]);
+
+        for row in 0..self.shape[0] {
+            let data_range = row * self.shape[1]..(row + 1) * self.shape[1];
+
+            for (value, mask) in self.data[data_range.clone()].iter().zip(mask.get_masks()[data_range].iter()) {
+                if *mask {
+                    output.data[row] += value;
+                }
+            }
+        }
+    }
 }

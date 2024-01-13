@@ -16,8 +16,8 @@ limitations under the License.
 
 mod utils;
 
-use fast_arrays::Array;
-use utils::{assert_approximate, get_random_f32_vec};
+use fast_arrays::{Array, Mask};
+use utils::{assert_approximate, get_random_f32_vec, get_random_bool_vec};
 
 use rstest::rstest;
 
@@ -109,4 +109,58 @@ fn dot_product(a: &Vec<f32>, b: &Vec<f32>) -> f32 {
     }
 
     dot_product
+}
+
+#[test]
+fn sum_to_row_in_place_masked() {
+    for rows in 1..32 {
+        for columns in 1..32 {
+            let array_data = get_random_f32_vec(0, rows * columns);
+            let array = Array::<2>::from_vec(&array_data, [rows, columns]);
+            let mask_data = get_random_bool_vec(0, rows * columns);
+            let mask = Mask::<2>::from_vec(&mask_data, [rows, columns]);
+            let mut output_array = Array::zeros(&[columns]);
+
+            array.sum_to_row_in_place_masked(&mask, &mut output_array);
+
+            for c in 0..columns {
+                let mut sum = 0.0;
+
+                for r in 0..rows {
+                    if mask.get(r, c) {
+                        sum += array.get(r, c);
+                    }
+                }
+
+                assert_approximate(output_array.get(c), sum, 0.001);
+            }
+        }
+    }
+}
+
+#[test]
+fn sum_to_column_in_place_masked() {
+    for rows in 1..32 {
+        for columns in 1..32 {
+            let array_data = get_random_f32_vec(0, rows * columns);
+            let array = Array::<2>::from_vec(&array_data, [rows, columns]);
+            let mask_data = get_random_bool_vec(0, rows * columns);
+            let mask = Mask::<2>::from_vec(&mask_data, [rows, columns]);
+            let mut output_array = Array::zeros(&[rows]);
+
+            array.sum_to_column_in_place_masked(&mask, &mut output_array);
+
+            for r in 0..rows {
+                let mut sum = 0.0;
+
+                for c in 0..columns {
+                    if mask.get(r, c) {
+                        sum += array.get(r, c);
+                    }
+                }
+
+                assert_approximate(output_array.get(r), sum, 0.001);
+            }
+        }
+    }
 }

@@ -88,6 +88,17 @@ impl Mask<1> {
 }
 
 impl Mask<2> {
+    pub fn from_vec(data: &Vec<bool>, shape: [usize; 2]) -> Self {
+        assert!(shape[0] > 0);
+        assert!(shape[1] > 0);
+        assert_eq!(data.len(), shape[0] * shape[1]);
+
+        Self {
+            masks: data.clone(),
+            shape
+        }
+    }
+
     pub fn get(&self, row: usize, column: usize) -> bool {
         self.masks[row * self.shape[1] + column]
     }

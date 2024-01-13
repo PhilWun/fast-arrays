@@ -137,6 +137,42 @@ impl Mask<1> {
 }
 
 impl Mask<2> {
+    pub fn from_vec(data: &Vec<bool>, shape: [usize; 2]) -> Self {
+        assert!(shape[0] > 0);
+        assert!(shape[1] > 0);
+        assert_eq!(data.len(), shape[0] * shape[1]);
+
+        let row_count = shape[0];
+        let column_count = shape[1];
+        let masks_per_row = column_count.div_ceil(16);
+        let mut new_masks = Vec::with_capacity(masks_per_row * row_count);
+        let mut index = 0;
+
+        for _ in 0..row_count {
+            for c in 0..masks_per_row {
+                let mut mask = 0;
+                let mut limit = 16;
+            
+                // if it is the last mask in the row
+                if (c + 1) % masks_per_row == 0 {
+                    limit = (column_count - 1) % 16 + 1;
+                }
+
+                for i in 0..limit {
+                    mask |= (data[index] as u16) << i;
+                    index += 1;
+                }
+
+                new_masks.push(mask);
+            }
+        }
+
+        Self {
+            masks: new_masks,
+            shape
+        }
+    }
+
     pub fn get(&self, row: usize, column: usize) -> bool {
         let masks_per_row = self.shape[1].div_ceil(16);
 
