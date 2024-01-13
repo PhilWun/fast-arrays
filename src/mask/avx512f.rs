@@ -65,16 +65,6 @@ impl From<Vec<bool>> for Mask<1> {
 }
 
 impl Mask<1> {
-    pub fn zeros(len: usize) -> Self {
-        let mask_count = len.div_ceil(16);
-        let masks = vec![0u16; mask_count];
-
-        Self {
-            masks,
-            shape: [len]
-        }
-    }
-
     pub fn get(&self, index: usize) -> bool {
         let mask = self.masks[index / 16];
 
@@ -121,8 +111,10 @@ impl Mask<1> {
         assert_eq!(output.shape[0], k);
         assert_eq!(output.shape[1], self.shape[0]);
 
+        let masks_per_row = self.shape[0].div_ceil(16);
+
         for (i, m) in output.masks.iter_mut().enumerate() {
-            *m = self.masks[i % self.shape[0]];
+            *m = self.masks[i % masks_per_row];
         }
     }
 
@@ -170,6 +162,21 @@ impl<'a, const D: usize> Drop for MutableMasks<'a, D> {
 }
 
 impl<const D: usize> Mask<D> {
+    pub fn zeros(shape: &[usize; D]) -> Self {
+        let mut mask_count = shape.last().unwrap().div_ceil(16);
+
+        for i in 0..D-1 {
+            mask_count *= shape[i];
+        }
+
+        let masks = vec![0u16; mask_count];
+
+        Self {
+            masks,
+            shape: *shape
+        }
+    }
+
     pub fn new_from_data(shape: [usize; D], masks: Vec<__mmask16>) -> Mask<D> {
         let masks_per_row = shape.last().unwrap().div_ceil(16);
         let mut n_masks = masks_per_row;

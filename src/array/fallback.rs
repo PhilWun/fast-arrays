@@ -744,6 +744,28 @@ impl Array<1> {
             }
         }
     }
+
+    pub fn repeat_as_row_in_place(&self, k: usize, output: &mut Array<2>) {
+        assert_eq!(output.shape[0], k);
+        assert_eq!(output.shape[1], self.shape[0]);
+
+        for (i, m) in output.data.iter_mut().enumerate() {
+            *m = self.data[i % self.shape[0]];
+        }
+    }
+
+    pub fn repeat_as_column_in_place(&self, k: usize, output: &mut Array<2>) {
+        assert_eq!(output.shape[0], self.shape[0]);
+        assert_eq!(output.shape[1], k);
+
+        for i in 0..output.shape[0] {
+            let value = self.get(i);
+
+            for j in 0..k {
+                output.data[i * k + j] = value;
+            }
+        }
+    }
 }
 
 impl Array<2> {
@@ -755,6 +777,10 @@ impl Array<2> {
             data: data.clone(),
             shape
         }
+    }
+
+    pub fn get(&self, row: usize, column: usize) -> f32 {
+        self.data[row * self.shape[1] + column]
     }
 
     pub fn vector_multiplication(&self, other: &Array<1>) -> Array<1> {

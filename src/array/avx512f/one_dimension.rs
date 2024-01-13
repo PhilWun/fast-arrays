@@ -189,4 +189,30 @@ impl Array<1> {
             }
         }
     }
+
+    pub fn repeat_as_row_in_place(&self, k: usize, output: &mut Array<2>) {
+        assert_eq!(output.shape[0], k);
+        assert_eq!(output.shape[1], self.shape[0]);
+
+        let registers_per_row = self.shape[0].div_ceil(16);
+
+        for (i, m) in output.data.iter_mut().enumerate() {
+            *m = self.data[i % registers_per_row];
+        }
+    }
+
+    pub fn repeat_as_column_in_place(&self, k: usize, output: &mut Array<2>) {
+        assert_eq!(output.shape[0], self.shape[0]);
+        assert_eq!(output.shape[1], k);
+
+        let registers_per_row = k.div_ceil(16);
+
+        for i in 0..output.shape[0] {
+            let register = array_to_m512([self.get(i); 16]);
+
+            for j in 0..registers_per_row {
+                output.data[i * registers_per_row + j] = register;
+            }
+        }
+    }
 }

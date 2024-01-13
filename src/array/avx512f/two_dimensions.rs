@@ -81,6 +81,12 @@ impl Array<2> {
         }
     }
 
+    pub fn get(&self, row: usize, column: usize) -> f32 {
+        let masks_per_row = self.shape[1].div_ceil(16);
+
+        m512_to_array(self.data[row * masks_per_row + (column / 16)])[column % 16]
+    }
+
     pub fn sum(&self) -> f32 {
         assert!(self.shape[0] > 0);
         assert!(self.shape[1] > 0);

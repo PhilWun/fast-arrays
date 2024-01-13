@@ -114,7 +114,7 @@ fn tile_in_place() {
             let data = get_random_bool_vec(0, n);
             let mask: Mask<1> = data.clone().into();
             mask.assert_invariants_satisfied();
-            let mut output = Mask::zeros(n * k);
+            let mut output = Mask::zeros(&[n * k]);
             output.assert_invariants_satisfied();
 
             mask.tile_in_place(k, &mut output);
@@ -138,7 +138,7 @@ fn repeat_in_place() {
             let data = get_random_bool_vec(0, n);
             let mask: Mask<1> = data.clone().into();
             mask.assert_invariants_satisfied();
-            let mut output = Mask::zeros(n * k);
+            let mut output = Mask::zeros(&[n * k]);
             output.assert_invariants_satisfied();
 
             mask.repeat_in_place(k, &mut output);
@@ -148,6 +148,44 @@ fn repeat_in_place() {
 
             for (i, m) in output_data.iter().enumerate() {
                 assert_eq!(*m, data[i / k]);
+            }
+        }
+    }
+}
+
+#[test]
+fn repeat_as_row_in_place() {
+    for columns in 1..32 {
+        for rows in 1..32 {
+            let data = get_random_bool_vec(0, columns);
+            let mask_1d: Mask<1> = data.clone().into();
+            let mut output = Mask::zeros(&[rows, columns]);
+
+            mask_1d.repeat_as_row_in_place(rows, &mut output);
+
+            for i in 0..columns {
+                for j in 0..rows {
+                    assert_eq!(output.get(j, i), data[i]);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn repeat_as_row_in_place_shape_mismatch() {
+    for columns in 1..32 {
+        for rows in 1..32 {
+            let data = get_random_bool_vec(0, rows);
+            let array_1d: Mask<1> = data.clone().into();
+            let mut output = Mask::zeros(&[rows, columns]);
+
+            array_1d.repeat_as_column_in_place(columns, &mut output);
+
+            for k in 0..columns {
+                for l in 0..rows {
+                    assert_eq!(output.get(l, k), data[l]);
+                }
             }
         }
     }

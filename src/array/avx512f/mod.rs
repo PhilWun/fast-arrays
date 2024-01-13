@@ -113,6 +113,18 @@ impl<const D: usize> Array<D> {
         }
     }
 
+    pub fn assert_invariants_satisfied(&self) {
+        // check number of registers
+        let registers_per_row = self.shape.last().unwrap().div_ceil(16);
+        let mut n_registers = registers_per_row;
+
+        for i in 0..D-1 {
+            n_registers *= self.shape[i];
+        }
+
+        assert_eq!(self.data.len(), n_registers, "number of registers does not match the expected number");
+    }
+
     pub fn random_seed() -> [u32; 16] {
         let mut rng = SmallRng::from_entropy();
         let mut seed = [0; 16];

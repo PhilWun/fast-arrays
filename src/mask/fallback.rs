@@ -35,13 +35,6 @@ impl From<Vec<bool>> for Mask<1> {
 }
 
 impl Mask<1> {
-    pub fn zeros(len: usize) -> Self {
-        Self {
-            masks: vec![false; len],
-            shape: [len]
-        }
-    }
-
     pub fn get(&self, index: usize) -> bool {
         self.masks[index]
     }
@@ -70,6 +63,34 @@ impl Mask<1> {
             }
         }
     }
+
+    pub fn repeat_as_row_in_place(&self, k: usize, output: &mut Mask<2>) {
+        assert_eq!(output.shape[0], k);
+        assert_eq!(output.shape[1], self.shape[0]);
+
+        for (i, m) in output.masks.iter_mut().enumerate() {
+            *m = self.masks[i % self.shape[0]];
+        }
+    }
+
+    pub fn repeat_as_column_in_place(&self, k: usize, output: &mut Mask<2>) {
+        assert_eq!(output.shape[0], self.shape[0]);
+        assert_eq!(output.shape[1], k);
+
+        for i in 0..output.shape[0] {
+            let mask = self.get(i);
+
+            for j in 0..k {
+                output.masks[i * k + j] = mask;
+            }
+        }
+    }
+}
+
+impl Mask<2> {
+    pub fn get(&self, row: usize, column: usize) -> bool {
+        self.masks[row * self.shape[1] + column]
+    }
 }
 
 /// This struct is used to create a mutable iterator over the masks and automatically zero out unused elements afterwards.
@@ -84,6 +105,19 @@ impl<'a, const D: usize> MutableMasks<'a, D> {
 }
 
 impl<const D: usize> Mask<D> {
+    pub fn zeros(shape: &[usize; D]) -> Self {
+        let mut n_masks = 1;
+
+        for i in 0..D {
+            n_masks *= shape[i];
+        }
+
+        Self {
+            masks: vec![false; n_masks],
+            shape: *shape
+        }
+    }
+
     pub(crate) fn new_from_data(shape: [usize; D], masks: Vec<bool>) -> Mask<D> {
         let mut n_masks = 1;
 
@@ -108,6 +142,10 @@ impl<const D: usize> Mask<D> {
         MutableMasks {
             mask: self
         }
+    }
+
+    pub fn assert_invariants_satisfied(&self) {
+
     }
 
     pub fn and(&self, other: &Self) -> Self {
