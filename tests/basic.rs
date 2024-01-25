@@ -227,6 +227,37 @@ fn set_masked2_mismatched_shapes() {
 }
 
 #[test]
+fn copy() {
+    for i in 0..64 {
+        let data1 = get_random_f32_vec(0, i);
+        let data2 = get_random_f32_vec(1, i);
+
+        let mut array1: Array<1> = data1.clone().into();
+        let array2: Array<1> = data2.clone().into();
+
+        array1.copy(&array2);
+
+        let result: Vec<f32> = array1.into();
+
+        for (r, d) in result.iter().zip(data2.iter()) {
+            assert_eq!(r, d);
+        }
+    }
+}
+
+#[test]
+#[should_panic]
+fn copy_mismatched_shapes() {
+    let data1 = get_random_f32_vec(0, 3);
+    let data2 = get_random_f32_vec(1, 4);
+
+    let mut array1: Array<1> = data1.clone().into();
+    let array2: Array<1> = data2.clone().into();
+
+    array1.copy(&array2);
+}
+
+#[test]
 fn copy_masked() {
     for i in 0..64 {
         let data1 = get_random_f32_vec(0, i);

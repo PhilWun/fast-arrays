@@ -196,6 +196,14 @@ impl<const D: usize> Array<D> {
         }
     }
 
+    pub fn copy(&mut self, other: &Array<D>) {
+        assert_eq!(self.shape, other.shape);
+
+        for (d1, d2) in self.data.iter_mut().zip(other.data.iter()) {
+            *d1 = *d2;
+        }
+    }
+
     // copy the elements from `other` where `mask` is 1
     pub fn copy_masked(&mut self, other: &Array<D>, mask: &Mask<D>) {
         assert_same_shape_with_mask2(&self, other, mask);
