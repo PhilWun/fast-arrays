@@ -49,6 +49,10 @@ fn assert_same_shape2<const D: usize>(a: &Array<D>, b: &Array<D>) {
     assert_eq!(a.shape, b.shape, "the lengths of array one and two don't match: {:?} != {:?}", a.shape, b.shape);
 }
 
+fn assert_same_shape_mask<const D: usize>(a: &Array<D>, mask: &Mask<D>) {
+    assert_eq!(&a.shape, mask.get_shape(), "the shapes of the array and the mask don't match: {:?} != {:?}", a.shape, mask.get_shape());
+}
+
 fn assert_same_shape_with_mask2<const D: usize>(a: &Array<D>, b: &Array<D>, mask: &Mask<D>) {
     assert_eq!(a.shape, b.shape, "the lengths of array one and two don't match: {:?} != {:?}", a.shape, b.shape);
     assert_eq!(&a.shape, mask.get_shape(), "the lengths of array one and mask don't match: {:?} != {:?}", a.shape, mask.get_shape());
@@ -291,6 +295,29 @@ impl<const D: usize> Array<D> {
         }
     }
 
+    pub fn max_scalar(&self, scalar: f32) -> Self {
+        let mut new_array = self.clone();
+        new_array.max_scalar_in_place(scalar);
+
+        new_array
+    }
+
+    pub fn max_scalar_in_place(&mut self, scalar: f32) {
+        for d in self.data.iter_mut() {
+            *d = d.max(scalar);
+        }
+    }
+
+    pub fn max_scalar_in_place_masked(&mut self, scalar: f32, mask: &Mask<D>) {
+        assert_same_shape_mask(&self, mask);
+
+        for (d, m) in self.data.iter_mut().zip(mask.get_masks().iter()) {
+            if *m {
+                *d = d.max(scalar);
+            }
+        }
+    }
+
     pub fn min(&self, other: &Self) -> Self {
         let mut new_array = self.clone();
         new_array.min_in_place(other);
@@ -316,6 +343,29 @@ impl<const D: usize> Array<D> {
         }
     }
 
+    pub fn min_scalar(&self, scalar: f32) -> Self {
+        let mut new_array = self.clone();
+        new_array.min_scalar_in_place(scalar);
+
+        new_array
+    }
+
+    pub fn min_scalar_in_place(&mut self, scalar: f32) {
+        for d in self.data.iter_mut() {
+            *d = d.min(scalar);
+        }
+    }
+
+    pub fn min_scalar_in_place_masked(&mut self, scalar: f32, mask: &Mask<D>) {
+        assert_same_shape_mask(&self, mask);
+
+        for (d, m) in self.data.iter_mut().zip(mask.get_masks().iter()) {
+            if *m {
+                *d = d.min(scalar);
+            }
+        }
+    }
+
     pub fn add_scalar(&self, scalar: f32) -> Self {
         let mut new_array = self.clone();
         new_array.add_scalar_in_place(scalar);
@@ -330,6 +380,8 @@ impl<const D: usize> Array<D> {
     }
 
     pub fn add_scalar_in_place_masked(&mut self, scalar: f32, mask: &Mask<D>) {
+        assert_same_shape_mask(&self, mask);
+
         for (d, m) in self.data.iter_mut().zip(mask.get_masks().iter()) {
             if *m {
                 *d = *d + scalar;
@@ -351,6 +403,8 @@ impl<const D: usize> Array<D> {
     }
 
     pub fn sub_scalar_in_place_masked(&mut self, scalar: f32, mask: &Mask<D>) {
+        assert_same_shape_mask(&self, mask);
+
         for (d, m) in self.data.iter_mut().zip(mask.get_masks().iter()) {
             if *m {
                 *d = *d - scalar;
@@ -372,6 +426,8 @@ impl<const D: usize> Array<D> {
     }
 
     pub fn mul_scalar_in_place_masked(&mut self, scalar: f32, mask: &Mask<D>) {
+        assert_same_shape_mask(&self, mask);
+
         for (d, m) in self.data.iter_mut().zip(mask.get_masks().iter()) {
             if *m {
                 *d = *d * scalar;
@@ -393,6 +449,8 @@ impl<const D: usize> Array<D> {
     }
 
     pub fn div_scalar_in_place_masked(&mut self, scalar: f32, mask: &Mask<D>) {
+        assert_same_shape_mask(&self, mask);
+        
         for (d, m) in self.data.iter_mut().zip(mask.get_masks().iter()) {
             if *m {
                 *d = *d / scalar;

@@ -19,7 +19,7 @@ mod utils;
 use std::ops::{Add, Sub, Mul, Div};
 
 use fast_arrays::{Array, Mask};
-use utils::get_random_f32_vec;
+use utils::{get_random_f32_vec, get_random_bool_vec};
 
 use rstest::rstest;
 
@@ -153,6 +153,8 @@ fn out_of_place_shape_mismatch(#[case] test_function: fn(&Array<1>, &Array<1>) -
 #[case::sub(Array::sub_scalar_in_place, f32::sub)]
 #[case::mul(Array::mul_scalar_in_place, f32::mul)]
 #[case::div(Array::div_scalar_in_place, f32::div)]
+#[case::max(Array::max_scalar_in_place, f32::max)]
+#[case::min(Array::min_scalar_in_place, f32::min)]
 fn in_place_scalar(#[case] test_function: fn(&mut Array<1>, f32), #[case] target_function: fn(f32, f32) -> f32) {
     for i in 0..64 {
         let data1 = get_random_f32_vec(0, i);
@@ -174,6 +176,8 @@ fn in_place_scalar(#[case] test_function: fn(&mut Array<1>, f32), #[case] target
 #[case::sub(Array::sub_scalar_in_place_masked, f32::sub)]
 #[case::mul(Array::mul_scalar_in_place_masked, f32::mul)]
 #[case::div(Array::div_scalar_in_place_masked, f32::div)]
+#[case::max(Array::max_scalar_in_place_masked, f32::max)]
+#[case::min(Array::min_scalar_in_place_masked, f32::min)]
 fn in_place_scalar_masked(#[case] test_function: fn(&mut Array<1>, f32, &Mask<1>), #[case] target_function: fn(f32, f32) -> f32) {
     for i in 0..64 {
         let data1 = get_random_f32_vec(0, i);
@@ -197,10 +201,27 @@ fn in_place_scalar_masked(#[case] test_function: fn(&mut Array<1>, f32, &Mask<1>
 }
 
 #[rstest]
+#[case::add(Array::add_scalar_in_place_masked)]
+#[case::sub(Array::sub_scalar_in_place_masked)]
+#[case::mul(Array::mul_scalar_in_place_masked)]
+#[case::div(Array::div_scalar_in_place_masked)]
+#[case::max(Array::max_scalar_in_place_masked)]
+#[case::min(Array::min_scalar_in_place_masked)]
+#[should_panic]
+fn in_place_scalar_masked_shape_mismatched(#[case] test_function: fn(&mut Array<1>, f32, &Mask<1>)) {
+    let mut array1: Array<1> = get_random_f32_vec(0, 3).into();
+    let mask: Mask<1> = get_random_bool_vec(0, 4).into();
+
+    let _ = test_function(&mut array1, 42.0, &mask);
+}
+
+#[rstest]
 #[case::add(Array::add_scalar, f32::add)]
 #[case::sub(Array::sub_scalar, f32::sub)]
 #[case::mul(Array::mul_scalar, f32::mul)]
 #[case::div(Array::div_scalar, f32::div)]
+#[case::max(Array::max_scalar, f32::max)]
+#[case::min(Array::min_scalar, f32::min)]
 fn out_of_place_scalar(#[case] test_function: fn(&Array<1>, f32) -> Array<1>, #[case] target_function: fn(f32, f32) -> f32) {
     for i in 0..64 {
         let data1 = get_random_f32_vec(0, i);
