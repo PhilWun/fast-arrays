@@ -82,9 +82,34 @@ impl Array<2> {
     }
 
     pub fn get(&self, row: usize, column: usize) -> f32 {
-        let masks_per_row = self.shape[1].div_ceil(16);
+        if row >= self.shape[0] {
+            panic!("tried to get row {}, but the array has only {} row(s)", row, self.shape[0]);
+        }
 
-        m512_to_array(self.data[row * masks_per_row + (column / 16)])[column % 16]
+        if column >= self.shape[1] {
+            panic!("tried to get column {}, but the array has only {} column(s)", column, self.shape[1]);
+        }
+
+        let registers_per_row = self.shape[1].div_ceil(16);
+
+        m512_to_array(self.data[row * registers_per_row + (column / 16)])[column % 16]
+    }
+
+    pub fn set(&mut self, row: usize, column: usize, value: f32) {
+        if row >= self.shape[0] {
+            panic!("tried to set row {}, but the array has only {} row(s)", row, self.shape[0]);
+        }
+
+        if column >= self.shape[1] {
+            panic!("tried to set column {}, but the array has only {} column(s)", column, self.shape[1]);
+        }
+
+        let registers_per_row = self.shape[1].div_ceil(16);
+
+        let mut register = m512_to_array(self.data[row * registers_per_row + (column / 16)]);
+        register[column % 16] = value;
+
+        self.data[row * registers_per_row + (column / 16)] = array_to_m512(register);
     }
 
     pub fn sum(&self) -> f32 {

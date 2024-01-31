@@ -169,6 +169,14 @@ impl<const D: usize> Array<D> {
         m512i_to_array(seed)
     }
 
+    pub fn set_all(&mut self, value: f32) {
+        let new_register = array_to_m512([value; 16]);
+
+        for d in self.data.iter_mut() {
+            *d = new_register;
+        }
+    }
+
     /// set the elements to `value` where `mask` is 1
     pub fn set_masked(&mut self, value: f32, mask: &Mask<D>) {
         assert_eq!(&self.shape, mask.get_shape()); // TODO: add messages to asserts

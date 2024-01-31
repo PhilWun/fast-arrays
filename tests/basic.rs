@@ -109,11 +109,13 @@ fn random2d() {
 
 #[test]
 fn get() {
-    let data = get_random_f32_vec(0, 64);
-    let array: Array<1> = data.clone().into();
-
     for i in 0..64 {
-        assert_eq!(array.get(i), *data.get(i).unwrap());
+        let data = get_random_f32_vec(0, i);
+        let array: Array<1> = data.clone().into();
+
+        for j in 0..i {
+            assert_eq!(array.get(j), *data.get(j).unwrap());
+        }
     }
 }
 
@@ -127,22 +129,60 @@ fn get_out_of_bounds() {
 }
 
 #[test]
-fn set() {
-    let data = get_random_f32_vec(0, 64);
-    let mut array: Array<1> = data.clone().into();
-
+fn set_1d() {
     for i in 0..64 {
-        array.set(i, (i + 10) as f32);
-        assert_eq!(array.get(i), (i + 10) as f32);
+        let data = get_random_f32_vec(0, i);
+        let mut array: Array<1> = data.clone().into();
+
+        for j in 0..i {
+            array.set(j, (j + 10) as f32);
+            assert_eq!(array.get(j), (j + 10) as f32);
+        }
     }
 }
 
 #[test]
 #[should_panic]
-fn set_out_of_bounds() {
+fn set_1d_out_of_bounds() {
     let data = get_random_f32_vec(0, 64);
     let mut array: Array<1> = data.into();
     array.set(64, 42.0);
+}
+
+#[test]
+fn get_set_2d() {
+    for rows in 1..32 {
+        for columns in 1..32 {
+            let data = get_random_f32_vec(0, rows * columns);
+            let mut array: Array<2> = Array::zeros(&[rows, columns]);
+
+            for row in 0..rows {
+                for column in 0..columns {
+                    array.set(row, column, data[row * columns + column]);
+                }
+            }
+
+            for row in 0..rows {
+                for column in 0..columns {
+                    assert_eq!(array.get(row, column), data[row * columns + column]);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+#[should_panic]
+fn get_2d_out_of_bounds() {
+    let array = Array::zeros(&[3, 4]);
+    array.get(4, 4);
+}
+
+#[test]
+#[should_panic]
+fn set_2d_out_of_bounds() {
+    let mut array = Array::zeros(&[3, 4]);
+    array.set(4, 4, 42.0);
 }
 
 #[test]

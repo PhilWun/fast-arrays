@@ -122,6 +122,12 @@ impl<const D: usize> Array<D> {
         seed
     }
 
+    pub fn set_all(&mut self, value: f32) {
+        for v in self.data.iter_mut() {
+            *v = value;
+        }
+    }
+
     /// set the elements to `value` where `mask` is 1
     pub fn set_masked(&mut self, value: f32, mask: &Mask<D>) {
         assert_eq!(&self.shape, mask.get_shape()); // TODO: add messages to asserts
@@ -763,12 +769,6 @@ impl Array<1> {
         self.data[index] = value;
     }
 
-    pub fn set_all(&mut self, value: f32) {
-        for v in self.data.iter_mut() {
-            *v = value;
-        }
-    }
-
     pub fn dot_product(&self, other: &Self) -> f32 {
         let mut result = 0.0;
 
@@ -846,7 +846,27 @@ impl Array<2> {
     }
 
     pub fn get(&self, row: usize, column: usize) -> f32 {
+        if row >= self.shape[0] {
+            panic!("tried to get row {}, but the array has only {} row(s)", row, self.shape[0]);
+        }
+
+        if column >= self.shape[1] {
+            panic!("tried to get column {}, but the array has only {} column(s)", column, self.shape[1]);
+        }
+
         self.data[row * self.shape[1] + column]
+    }
+
+    pub fn set(&mut self, row: usize, column: usize, value: f32) {
+        if row >= self.shape[0] {
+            panic!("tried to set row {}, but the array has only {} row(s)", row, self.shape[0]);
+        }
+
+        if column >= self.shape[1] {
+            panic!("tried to set column {}, but the array has only {} column(s)", column, self.shape[1]);
+        }
+
+        self.data[row * self.shape[1] + column] = value;
     }
 
     pub fn vector_multiplication(&self, other: &Array<1>) -> Array<1> {
