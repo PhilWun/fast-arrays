@@ -605,6 +605,26 @@ impl<const D: usize> Array<D> {
         product
     }
 
+    pub fn max_reduce(&self) -> f32 {
+        let mut max = f32::MIN;
+
+        for v in self.data.iter() {
+            max = max.max(*v);
+        }
+
+        max
+    }
+
+    pub fn min_reduce(&self) -> f32 {
+        let mut min = f32::MAX;
+
+        for v in self.data.iter() {
+            min = min.min(*v);
+        }
+
+        min
+    }
+
     fn compare(a: &Array<D>, b: &Array<D>, func: fn(&f32, &f32) -> bool) -> Mask<D> {
         assert_same_shape2(a, b);
         let mut data = Vec::with_capacity(a.data.len());

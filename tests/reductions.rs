@@ -24,6 +24,8 @@ use rstest::rstest;
 #[rstest]
 #[case::sum(Array::<1>::sum, sum)]
 #[case::product(Array::<1>::product, product)]
+#[case::max(Array::<1>::max_reduce, max)]
+#[case::min(Array::<1>::min_reduce, min)]
 fn reduction1d_one_input(#[case] test_function: fn(&Array<1>) -> f32, #[case] target_function: fn(&Vec<f32>) -> f32) {
     for i in 0..64 {
         let data = get_random_f32_vec(0, i);
@@ -39,6 +41,8 @@ fn reduction1d_one_input(#[case] test_function: fn(&Array<1>) -> f32, #[case] ta
 #[rstest]
 #[case::sum(Array::<2>::sum, sum)]
 #[case::product(Array::<2>::product, product)]
+#[case::max(Array::<2>::max_reduce, max)]
+#[case::min(Array::<2>::min_reduce, min)]
 fn reduction2d_one_input(#[case] test_function: fn(&Array<2>) -> f32, #[case] target_function: fn(&Vec<f32>) -> f32) {
     for i in 1..32 {
         for j in 1..32 {
@@ -95,6 +99,34 @@ fn product(input: &Vec<f32>) -> f32 {
     }
 
     product
+}
+
+fn max(input: &Vec<f32>) -> f32 {
+    if input.len() == 0 {
+        return f32::MIN;
+    }
+
+    let mut max = f32::MIN;
+
+    for i in input.iter() {
+        max = max.max(*i);
+    }
+
+    max
+}
+
+fn min(input: &Vec<f32>) -> f32 {
+    if input.len() == 0 {
+        return f32::MAX;
+    }
+
+    let mut min = f32::MAX;
+
+    for i in input.iter() {
+        min = min.min(*i);
+    }
+
+    min
 }
 
 fn dot_product(a: &Vec<f32>, b: &Vec<f32>) -> f32 {

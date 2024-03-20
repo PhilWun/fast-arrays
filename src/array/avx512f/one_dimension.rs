@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use std::arch::x86_64::{__m512, _mm512_add_ps, _mm512_mask_add_ps, _mm512_reduce_add_ps, _mm512_mul_ps, _mm512_mask_mul_ps, _mm512_reduce_mul_ps, _mm512_permutexvar_ps, _mm512_broadcastss_ps, _mm512_castps512_ps128};
+use std::arch::x86_64::{__m512, _mm512_add_ps, _mm512_broadcastss_ps, _mm512_castps512_ps128, _mm512_mask_add_ps, _mm512_mask_max_ps, _mm512_mask_min_ps, _mm512_mask_mul_ps, _mm512_max_ps, _mm512_min_ps, _mm512_mul_ps, _mm512_permutexvar_ps, _mm512_reduce_add_ps, _mm512_reduce_max_ps, _mm512_reduce_min_ps, _mm512_reduce_mul_ps};
 
 use crate::{Array, array::avx512f::array_to_m512i};
 
@@ -113,8 +113,30 @@ impl Array<1> {
         }
 
         unsafe {
-            let sum_register = reduce(&self.data, self.shape[0], 1.0, _mm512_mul_ps, _mm512_mask_mul_ps);
-            _mm512_reduce_mul_ps(sum_register)
+            let product_register = reduce(&self.data, self.shape[0], 1.0, _mm512_mul_ps, _mm512_mask_mul_ps);
+            _mm512_reduce_mul_ps(product_register)
+        }
+    }
+
+    pub fn max_reduce(&self) -> f32 {
+        if self.shape[0] == 0 {
+            return f32::MIN;
+        }
+
+        unsafe {
+            let max_register = reduce(&self.data, self.shape[0], f32::MIN, _mm512_max_ps, _mm512_mask_max_ps);
+            _mm512_reduce_max_ps(max_register)
+        }
+    }
+
+    pub fn min_reduce(&self) -> f32 {
+        if self.shape[0] == 0 {
+            return f32::MAX;
+        }
+
+        unsafe {
+            let min_register = reduce(&self.data, self.shape[0], f32::MAX, _mm512_min_ps, _mm512_mask_min_ps);
+            _mm512_reduce_min_ps(min_register)
         }
     }
 

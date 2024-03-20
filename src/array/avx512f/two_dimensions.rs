@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use std::arch::x86_64::{_mm512_add_ps, _mm512_mask_add_ps, _mm512_mul_ps, _mm512_mask_mul_ps, _mm512_reduce_add_ps, _mm512_reduce_mul_ps, _mm512_fmadd_ps, _mm512_mask3_fmadd_ps, __m512};
+use std::arch::x86_64::{__m512, _mm512_add_ps, _mm512_fmadd_ps, _mm512_mask3_fmadd_ps, _mm512_mask_add_ps, _mm512_mask_max_ps, _mm512_mask_min_ps, _mm512_mask_mul_ps, _mm512_max_ps, _mm512_min_ps, _mm512_mul_ps, _mm512_reduce_add_ps, _mm512_reduce_max_ps, _mm512_reduce_min_ps, _mm512_reduce_mul_ps};
 
 use crate::{Array, Mask};
 
@@ -157,6 +157,54 @@ impl Array<2> {
             }
             
             _mm512_reduce_mul_ps(product_register)
+        }
+    }
+
+    pub fn max_reduce(&self) -> f32 {
+        assert!(self.shape[0] > 0);
+        assert!(self.shape[1] > 0);
+
+        let row_count = self.shape[0];
+        let column_count = self.shape[1];
+        let registers_per_row = column_count.div_ceil(16);
+
+        unsafe {
+            let mut max_register = array_to_m512([f32::MIN; 16]);
+
+            for i in 0..row_count {
+                let start = i * registers_per_row;
+                let end = start + registers_per_row;
+
+                let intermediate_result = reduce(&self.data[start..end], column_count, f32::MIN, _mm512_max_ps, _mm512_mask_max_ps);
+
+                max_register = _mm512_max_ps(max_register, intermediate_result);
+            }
+            
+            _mm512_reduce_max_ps(max_register)
+        }
+    }
+
+    pub fn min_reduce(&self) -> f32 {
+        assert!(self.shape[0] > 0);
+        assert!(self.shape[1] > 0);
+
+        let row_count = self.shape[0];
+        let column_count = self.shape[1];
+        let registers_per_row = column_count.div_ceil(16);
+
+        unsafe {
+            let mut min_register = array_to_m512([f32::MAX; 16]);
+
+            for i in 0..row_count {
+                let start = i * registers_per_row;
+                let end = start + registers_per_row;
+
+                let intermediate_result = reduce(&self.data[start..end], column_count, f32::MAX, _mm512_min_ps, _mm512_mask_min_ps);
+
+                min_register = _mm512_min_ps(min_register, intermediate_result);
+            }
+            
+            _mm512_reduce_min_ps(min_register)
         }
     }
 
