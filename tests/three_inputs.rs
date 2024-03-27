@@ -16,6 +16,8 @@ limitations under the License.
 
 mod utils;
 
+use std::ops::{Add, Div, Mul, Sub};
+
 use fast_arrays::{Array, Mask};
 use utils::{assert_approximate, get_random_f32_vec};
 
@@ -23,7 +25,10 @@ use rstest::rstest;
 
 #[rstest]
 #[case::fmadd(Array::fmadd_in_place, |x, y, z| y * z + x)]
-fn in_place(#[case] test_function: fn(&mut Array<1>, &Array<1>, &Array<1>), #[case] target_function: fn(f32, f32, f32) -> f32) {
+fn in_place(
+    #[case] test_function: fn(&mut Array<1>, &Array<1>, &Array<1>),
+    #[case] target_function: fn(f32, f32, f32) -> f32,
+) {
     for i in 0..64 {
         let data1 = get_random_f32_vec(0, i);
         let data2 = get_random_f32_vec(1, i);
@@ -36,7 +41,12 @@ fn in_place(#[case] test_function: fn(&mut Array<1>, &Array<1>, &Array<1>), #[ca
         test_function(&mut array1, &array2, &array3);
         let result: Vec<f32> = array1.into();
 
-        for (((d1, d2), d3), r) in data1.iter().zip(data2.iter()).zip(data3.iter()).zip(result.iter()) {
+        for (((d1, d2), d3), r) in data1
+            .iter()
+            .zip(data2.iter())
+            .zip(data3.iter())
+            .zip(result.iter())
+        {
             assert_approximate(*r, target_function(*d1, *d2, *d3), 0.001);
         }
     }
@@ -48,14 +58,17 @@ fn in_place(#[case] test_function: fn(&mut Array<1>, &Array<1>, &Array<1>), #[ca
 fn in_place_shape_mismatch(#[case] test_function: fn(&mut Array<1>, &Array<1>, &Array<1>)) {
     let mut a: Array<1> = get_random_f32_vec(0, 3).into();
     let b: Array<1> = get_random_f32_vec(1, 4).into();
-    let c: Array<1> = get_random_f32_vec(2, 5).into();       
-    
+    let c: Array<1> = get_random_f32_vec(2, 5).into();
+
     test_function(&mut a, &b, &c);
 }
 
 #[rstest]
 #[case::fmadd(Array::fmadd_in_place_masked, |x, y, z| y * z + x)]
-fn in_place_masked(#[case] test_function: fn(&mut Array<1>, &Array<1>, &Array<1>, &Mask<1>), #[case] target_function: fn(f32, f32, f32) -> f32) {
+fn in_place_masked(
+    #[case] test_function: fn(&mut Array<1>, &Array<1>, &Array<1>, &Mask<1>),
+    #[case] target_function: fn(f32, f32, f32) -> f32,
+) {
     for i in 0..64 {
         let data1 = get_random_f32_vec(0, i);
         let data2 = get_random_f32_vec(1, i);
@@ -71,7 +84,12 @@ fn in_place_masked(#[case] test_function: fn(&mut Array<1>, &Array<1>, &Array<1>
         test_function(&mut array1, &array2, &array3, &mask);
         let result: Vec<f32> = array1.into();
 
-        for (((d1, d2), d3), r) in data1.iter().zip(data2.iter()).zip(data3.iter()).zip(result.iter()) {
+        for (((d1, d2), d3), r) in data1
+            .iter()
+            .zip(data2.iter())
+            .zip(data3.iter())
+            .zip(result.iter())
+        {
             if d1 > d2 {
                 assert_approximate(*r, target_function(*d1, *d2, *d3), 0.001);
             } else {
@@ -84,22 +102,27 @@ fn in_place_masked(#[case] test_function: fn(&mut Array<1>, &Array<1>, &Array<1>
 #[rstest]
 #[case::fmadd(Array::fmadd_in_place_masked)]
 #[should_panic]
-fn in_place_masked_shape_mismatch(#[case] test_function: fn(&mut Array<1>, &Array<1>, &Array<1>, &Mask<1>)) {
+fn in_place_masked_shape_mismatch(
+    #[case] test_function: fn(&mut Array<1>, &Array<1>, &Array<1>, &Mask<1>),
+) {
     let mut a: Array<1> = get_random_f32_vec(0, 3).into();
     let b: Array<1> = get_random_f32_vec(1, 3).into();
-    let c: Array<1> = get_random_f32_vec(2, 3).into();  
+    let c: Array<1> = get_random_f32_vec(2, 3).into();
 
     let tmp1: Array<1> = get_random_f32_vec(0, 4).into();
     let tmp2: Array<1> = get_random_f32_vec(1, 4).into();
     let mask = tmp1.compare_greater_than(&tmp2);
     mask.assert_invariants_satisfied();
-    
+
     test_function(&mut a, &b, &c, &mask);
 }
 
 #[rstest]
 #[case::fmadd(Array::fmadd, |x, y, z| y * z + x)]
-fn out_of_place(#[case] test_function: fn(&Array<1>, &Array<1>, &Array<1>) -> Array<1>, #[case] target_function: fn(f32, f32, f32) -> f32) {
+fn allocating(
+    #[case] test_function: fn(&Array<1>, &Array<1>, &Array<1>) -> Array<1>,
+    #[case] target_function: fn(f32, f32, f32) -> f32,
+) {
     for i in 0..64 {
         let data1 = get_random_f32_vec(0, i);
         let data2 = get_random_f32_vec(1, i);
@@ -111,7 +134,12 @@ fn out_of_place(#[case] test_function: fn(&Array<1>, &Array<1>, &Array<1>) -> Ar
 
         let result: Vec<f32> = test_function(&array1, &array2, &array3).into();
 
-        for (((d1, d2), d3), r) in data1.iter().zip(data2.iter()).zip(data3.iter()).zip(result.iter()) {
+        for (((d1, d2), d3), r) in data1
+            .iter()
+            .zip(data2.iter())
+            .zip(data3.iter())
+            .zip(result.iter())
+        {
             assert_approximate(*r, target_function(*d1, *d2, *d3), 0.001);
         }
     }
@@ -120,7 +148,9 @@ fn out_of_place(#[case] test_function: fn(&Array<1>, &Array<1>, &Array<1>) -> Ar
 #[rstest]
 #[case::fmadd(Array::fmadd)]
 #[should_panic]
-fn out_of_place_shape_mismatch(#[case] test_function: fn(&Array<1>, &Array<1>, &Array<1>) -> Array<1>) {
+fn allocating_shape_mismatch(
+    #[case] test_function: fn(&Array<1>, &Array<1>, &Array<1>) -> Array<1>,
+) {
     let a: Array<1> = get_random_f32_vec(0, 3).into();
     let b: Array<1> = get_random_f32_vec(1, 4).into();
     let c: Array<1> = get_random_f32_vec(2, 5).into();
@@ -130,7 +160,10 @@ fn out_of_place_shape_mismatch(#[case] test_function: fn(&Array<1>, &Array<1>, &
 
 #[rstest]
 #[case::fmadd(Array::fmadd_scalar_in_place, |x, y, z| y * z + x)]
-fn in_place_scalar(#[case] test_function: fn(&mut Array<1>, &Array<1>, f32), #[case] target_function: fn(f32, f32, f32) -> f32) {
+fn in_place_scalar(
+    #[case] test_function: fn(&mut Array<1>, &Array<1>, f32),
+    #[case] target_function: fn(f32, f32, f32) -> f32,
+) {
     for i in 0..64 {
         let data1 = get_random_f32_vec(0, i);
         let data2 = get_random_f32_vec(1, i);
@@ -153,13 +186,16 @@ fn in_place_scalar(#[case] test_function: fn(&mut Array<1>, &Array<1>, f32), #[c
 fn in_place_scalar_shape_mismatch(#[case] test_function: fn(&mut Array<1>, &Array<1>, f32)) {
     let mut a: Array<1> = get_random_f32_vec(0, 3).into();
     let b: Array<1> = get_random_f32_vec(1, 4).into();
-    
+
     test_function(&mut a, &b, 42.0);
 }
 
 #[rstest]
 #[case::fmadd(Array::fmadd_scalar_in_place_masked, |x, y, z| y * z + x)]
-fn in_place_scalar_masked(#[case] test_function: fn(&mut Array<1>, &Array<1>, f32, &Mask<1>), #[case] target_function: fn(f32, f32, f32) -> f32) {
+fn in_place_scalar_masked(
+    #[case] test_function: fn(&mut Array<1>, &Array<1>, f32, &Mask<1>),
+    #[case] target_function: fn(f32, f32, f32) -> f32,
+) {
     for i in 0..64 {
         let data1 = get_random_f32_vec(0, i);
         let data2 = get_random_f32_vec(1, i);
@@ -185,7 +221,9 @@ fn in_place_scalar_masked(#[case] test_function: fn(&mut Array<1>, &Array<1>, f3
 #[rstest]
 #[case::fmadd(Array::fmadd_scalar_in_place_masked)]
 #[should_panic]
-fn in_place_scalar_masked_shape_mismatch(#[case] test_function: fn(&mut Array<1>, &Array<1>, f32, &Mask<1>)) {
+fn in_place_scalar_masked_shape_mismatch(
+    #[case] test_function: fn(&mut Array<1>, &Array<1>, f32, &Mask<1>),
+) {
     let mut a: Array<1> = get_random_f32_vec(0, 3).into();
     let b: Array<1> = get_random_f32_vec(1, 3).into();
 
@@ -193,13 +231,16 @@ fn in_place_scalar_masked_shape_mismatch(#[case] test_function: fn(&mut Array<1>
     let tmp2: Array<1> = get_random_f32_vec(1, 4).into();
     let mask = tmp1.compare_greater_than(&tmp2);
     mask.assert_invariants_satisfied();
-    
+
     test_function(&mut a, &b, 42.0, &mask);
 }
 
 #[rstest]
 #[case::fmadd(Array::fmadd_scalar, |x, y, z| y * z + x)]
-fn out_of_place_scalar(#[case] test_function: fn(&Array<1>, &Array<1>, f32) -> Array<1>, #[case] target_function: fn(f32, f32, f32) -> f32) {
+fn allocating_scalar(
+    #[case] test_function: fn(&Array<1>, &Array<1>, f32) -> Array<1>,
+    #[case] target_function: fn(f32, f32, f32) -> f32,
+) {
     for i in 0..64 {
         let data1 = get_random_f32_vec(0, i);
         let data2 = get_random_f32_vec(1, i);
@@ -218,9 +259,54 @@ fn out_of_place_scalar(#[case] test_function: fn(&Array<1>, &Array<1>, f32) -> A
 #[rstest]
 #[case::fmadd(Array::fmadd_scalar)]
 #[should_panic]
-fn out_of_place_scalar_shape_mismatch(#[case] test_function: fn(&Array<1>, &Array<1>, f32) -> Array<1>) {
+fn allocating_scalar_shape_mismatch(
+    #[case] test_function: fn(&Array<1>, &Array<1>, f32) -> Array<1>,
+) {
     let a: Array<1> = get_random_f32_vec(0, 3).into();
     let b: Array<1> = get_random_f32_vec(1, 4).into();
 
     test_function(&a, &b, 42.0);
+}
+
+#[rstest]
+#[case::add(Array::add_out_of_place, f32::add)]
+#[case::sub(Array::sub_out_of_place, f32::sub)]
+#[case::mul(Array::mul_out_of_place, f32::mul)]
+#[case::div(Array::div_out_of_place, f32::div)]
+#[case::max(Array::max_out_of_place, f32::max)]
+#[case::min(Array::min_out_of_place, f32::min)]
+fn out_of_place(
+    #[case] test_function: fn(&Array<1>, &Array<1>, &mut Array<1>),
+    #[case] target_function: fn(f32, f32) -> f32,
+) {
+    for i in 0..64 {
+        let data1 = get_random_f32_vec(0, i);
+        let data2 = get_random_f32_vec(1, i);
+
+        let array1: Array<1> = data1.clone().into();
+        let array2: Array<1> = data2.clone().into();
+        let mut array3: Array<1> = Array::zeros(&[i]);
+
+        test_function(&array1, &array2, &mut array3);
+        let result: Vec<f32> = array3.into();
+
+        for ((d1, d2), r) in data1.iter().zip(data2.iter()).zip(result.iter()) {
+            assert_eq!(*r, target_function(*d1, *d2));
+        }
+    }
+}
+
+#[rstest]
+#[case::add(Array::add_out_of_place)]
+#[case::sub(Array::sub_out_of_place)]
+#[case::mul(Array::mul_out_of_place)]
+#[case::div(Array::div_out_of_place)]
+#[case::max(Array::max_out_of_place)]
+#[case::min(Array::min_out_of_place)]
+#[should_panic]
+fn out_of_place_shape_mismatch(#[case] test_function: fn(&Array<1>, &Array<1>, &mut Array<1>)) {
+    let array1: Array<1> = get_random_f32_vec(0, 3).into();
+    let array2: Array<1> = get_random_f32_vec(1, 4).into();
+    let mut array3: Array<1> = get_random_f32_vec(2, 5).into();
+    let _ = test_function(&array1, &array2, &mut array3);
 }

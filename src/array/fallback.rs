@@ -209,6 +209,14 @@ impl<const D: usize> Array<D> {
         }
     }
 
+    pub fn add_out_of_place(&self, other: &Self, output: &mut Self) {
+        assert_same_shape3(self, other, output);
+
+        for ((l, r), o) in self.data.iter().zip(other.data.iter()).zip(output.data.iter_mut()) {
+            *o = *l + *r;
+        }
+    }
+
     pub fn sub(&self, other: &Self) -> Self {
         let mut new_array = self.clone();
         new_array.sub_in_place(other);
@@ -231,6 +239,14 @@ impl<const D: usize> Array<D> {
             if *m {
                 *l = *l - *r;
             }
+        }
+    }
+
+    pub fn sub_out_of_place(&self, other: &Self, output: &mut Self) {
+        assert_same_shape3(self, other, output);
+
+        for ((l, r), o) in self.data.iter().zip(other.data.iter()).zip(output.data.iter_mut()) {
+            *o = *l - *r;
         }
     }
 
@@ -259,6 +275,14 @@ impl<const D: usize> Array<D> {
         }
     }
 
+    pub fn mul_out_of_place(&self, other: &Self, output: &mut Self) {
+        assert_same_shape3(self, other, output);
+
+        for ((l, r), o) in self.data.iter().zip(other.data.iter()).zip(output.data.iter_mut()) {
+            *o = *l * *r;
+        }
+    }
+
     pub fn div(&self, other: &Self) -> Self {
         let mut new_array = self.clone();
         new_array.div_in_place(other);
@@ -284,6 +308,14 @@ impl<const D: usize> Array<D> {
         }
     }
 
+    pub fn div_out_of_place(&self, other: &Self, output: &mut Self) {
+        assert_same_shape3(self, other, output);
+
+        for ((l, r), o) in self.data.iter().zip(other.data.iter()).zip(output.data.iter_mut()) {
+            *o = *l / *r;
+        }
+    }
+
     pub fn max(&self, other: &Self) -> Self {
         let mut new_array = self.clone();
         new_array.max_in_place(other);
@@ -306,6 +338,14 @@ impl<const D: usize> Array<D> {
             if *m {
                 *l = l.max(*r);
             }
+        }
+    }
+
+    pub fn max_out_of_place(&self, other: &Self, output: &mut Self) {
+        assert_same_shape3(self, other, output);
+
+        for ((l, r), o) in self.data.iter().zip(other.data.iter()).zip(output.data.iter_mut()) {
+            *o = l.max(*r);
         }
     }
 
@@ -354,6 +394,14 @@ impl<const D: usize> Array<D> {
             if *m {
                 *l = l.min(*r);
             }
+        }
+    }
+
+    pub fn min_out_of_place(&self, other: &Self, output: &mut Self) {
+        assert_same_shape3(self, other, output);
+
+        for ((l, r), o) in self.data.iter().zip(other.data.iter()).zip(output.data.iter_mut()) {
+            *o = l.min(*r);
         }
     }
 

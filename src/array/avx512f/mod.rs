@@ -261,6 +261,18 @@ impl<const D: usize> Array<D> {
         }
     }
 
+    pub fn add_out_of_place(&self, other: &Self, output: &mut Self) {
+        assert_same_shape3(&self, &other, &output);
+
+        unsafe {
+            for ((l, r), o) in self.data.iter().zip(other.data.iter()).zip(output.data.iter_mut()) {
+                *o = _mm512_add_ps(*l, *r);
+            }
+        }
+    }
+
+    // TODO: more out_of_place functions
+
     pub fn sub(&self, other: &Self) -> Self {
         let mut new_array = self.clone();
         new_array.sub_in_place(other);
@@ -284,6 +296,16 @@ impl<const D: usize> Array<D> {
         unsafe {
             for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.get_masks().iter()) {
                 *l = _mm512_mask_sub_ps(*l, *m, *l, *r);
+            }
+        }
+    }
+
+    pub fn sub_out_of_place(&self, other: &Self, output: &mut Self) {
+        assert_same_shape3(&self, &other, &output);
+
+        unsafe {
+            for ((l, r), o) in self.data.iter().zip(other.data.iter()).zip(output.data.iter_mut()) {
+                *o = _mm512_sub_ps(*l, *r);
             }
         }
     }
@@ -315,6 +337,16 @@ impl<const D: usize> Array<D> {
         }
     }
 
+    pub fn mul_out_of_place(&self, other: &Self, output: &mut Self) {
+        assert_same_shape3(&self, &other, &output);
+
+        unsafe {
+            for ((l, r), o) in self.data.iter().zip(other.data.iter()).zip(output.data.iter_mut()) {
+                *o = _mm512_mul_ps(*l, *r);
+            }
+        }
+    }
+
     pub fn div(&self, other: &Self) -> Self {
         let mut new_array = self.clone();
         new_array.div_in_place(other);
@@ -342,6 +374,16 @@ impl<const D: usize> Array<D> {
         }
     }
 
+    pub fn div_out_of_place(&self, other: &Self, output: &mut Self) {
+        assert_same_shape3(&self, &other, &output);
+
+        unsafe {
+            for ((l, r), o) in self.data.iter().zip(other.data.iter()).zip(output.data.iter_mut()) {
+                *o = _mm512_div_ps(*l, *r);
+            }
+        }
+    }
+
     pub fn max(&self, other: &Self) -> Self {
         let mut new_array = self.clone();
         new_array.max_in_place(other);
@@ -365,6 +407,16 @@ impl<const D: usize> Array<D> {
         unsafe {
             for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.get_masks().iter()) {
                 *l = _mm512_mask_max_ps(*l, *m, *l, *r);
+            }
+        }
+    }
+
+    pub fn max_out_of_place(&self, other: &Self, output: &mut Self) {
+        assert_same_shape3(&self, &other, &output);
+
+        unsafe {
+            for ((l, r), o) in self.data.iter().zip(other.data.iter()).zip(output.data.iter_mut()) {
+                *o = _mm512_max_ps(*l, *r);
             }
         }
     }
@@ -421,6 +473,16 @@ impl<const D: usize> Array<D> {
         unsafe {
             for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.get_masks().iter()) {
                 *l = _mm512_mask_min_ps(*l, *m, *l, *r);
+            }
+        }
+    }
+    
+    pub fn min_out_of_place(&self, other: &Self, output: &mut Self) {
+        assert_same_shape3(&self, &other, &output);
+
+        unsafe {
+            for ((l, r), o) in self.data.iter().zip(other.data.iter()).zip(output.data.iter_mut()) {
+                *o = _mm512_min_ps(*l, *r);
             }
         }
     }
