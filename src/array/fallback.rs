@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 use rand::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use crate::{Array, Mask};
 
@@ -67,6 +68,43 @@ fn assert_same_shape_with_mask3<const D: usize>(a: &Array<D>, b: &Array<D>, c: &
     assert_eq!(a.shape, b.shape, "the lengths of array one and two don't match: {:?} != {:?}", a.shape, b.shape);
     assert_eq!(b.shape, c.shape, "the lengths of array two and three don't match: {:?} != {:?}", b.shape, c.shape);
     assert_eq!(&a.shape, mask.get_shape(), "the lengths of array one and mask don't match: {:?} != {:?}", a.shape, mask.get_shape());
+}
+
+#[derive(Serialize)]
+struct ArraySerializerProxy<'a> {
+    data: &'a Vec<f32>,
+    shape: Vec<usize>
+}
+
+impl<const D: usize> Serialize for Array<D> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer {
+        let proxy = ArraySerializerProxy { data: &self.data, shape: self.shape.into() };
+        proxy.serialize(serializer)
+    }
+}
+
+#[derive(Deserialize)]
+struct ArrayDeserializerProxy {
+    data: Vec<f32>,
+    shape: Vec<usize>
+}
+
+impl<'de, const D: usize> Deserialize<'de> for Array<D> {
+    fn deserialize<De>(deserializer: De) -> Result<Self, De::Error>
+    where
+        De: serde::Deserializer<'de> {
+        let proxy = ArrayDeserializerProxy::deserialize(deserializer)?;
+        assert_eq!(proxy.shape.len(), D);
+
+        let mut shape = [0; D];
+        shape.copy_from_slice(&proxy.shape[..D]);
+
+        Ok(
+            Array { data: proxy.data, shape }
+        )
+    }
 }
 
 impl<const D: usize> Array<D> {

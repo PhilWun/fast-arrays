@@ -33,3 +33,15 @@ pub struct Array<const D: usize> {
     data: Vec<f32>,
     shape: [usize; D],
 }
+
+impl<const D: usize> Array<D> {
+    pub fn number_of_elements(&self) -> usize {
+        let mut elements_count = 1;
+
+        for s in self.shape.iter() {
+            elements_count *= s;
+        }
+
+        elements_count
+    }
+}

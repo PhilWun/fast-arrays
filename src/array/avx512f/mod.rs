@@ -18,11 +18,11 @@ mod one_dimension;
 mod two_dimensions;
 
 use std::{
-    arch::x86_64::{__m512, _mm512_add_ps, _mm512_sub_ps, _mm512_mul_ps, _mm512_div_ps, _mm512_max_ps, _mm512_min_ps, _mm512_sqrt_ps, _mm512_fmadd_ps, _mm512_abs_ps, _mm512_cmpeq_ps_mask, _mm512_cmpneq_ps_mask, _mm512_cmpnle_ps_mask, _mm512_cmpnlt_ps_mask, _mm512_cmplt_ps_mask, _mm512_cmple_ps_mask, _mm512_mul_round_ps, _MM_FROUND_TO_NEAREST_INT, _MM_FROUND_NO_EXC, _mm512_cvtps_epi32, _mm512_slli_epi32, _mm512_castsi512_ps, _mm512_add_epi32, _mm512_castps_si512, __mmask16, _mm512_mask_add_ps, _mm512_mask_sub_ps, _mm512_mask_mul_ps, _mm512_mask_div_ps, _mm512_mask_max_ps, _mm512_mask_min_ps, _mm512_mask3_fmadd_ps, _mm512_mask_sqrt_ps, _mm512_mask_abs_ps, _mm512_mask_blend_ps, __m512i, _mm512_mullo_epi32, _mm512_cvtepu32_ps, _mm512_and_si512},
-    simd::{f32x16, u32x16}
+    arch::x86_64::{__m512, __m512i, __mmask16, _mm512_abs_ps, _mm512_add_epi32, _mm512_add_ps, _mm512_and_si512, _mm512_castps_si512, _mm512_castsi512_ps, _mm512_cmpeq_ps_mask, _mm512_cmple_ps_mask, _mm512_cmplt_ps_mask, _mm512_cmpneq_ps_mask, _mm512_cmpnle_ps_mask, _mm512_cmpnlt_ps_mask, _mm512_cvtepu32_ps, _mm512_cvtps_epi32, _mm512_div_ps, _mm512_fmadd_ps, _mm512_mask3_fmadd_ps, _mm512_mask_abs_ps, _mm512_mask_add_ps, _mm512_mask_blend_ps, _mm512_mask_div_ps, _mm512_mask_max_ps, _mm512_mask_min_ps, _mm512_mask_mul_ps, _mm512_mask_sqrt_ps, _mm512_mask_sub_ps, _mm512_max_ps, _mm512_min_ps, _mm512_mul_ps, _mm512_mul_round_ps, _mm512_mullo_epi32, _mm512_slli_epi32, _mm512_sqrt_ps, _mm512_sub_ps, _MM_FROUND_NO_EXC, _MM_FROUND_TO_NEAREST_INT}, simd::{f32x16, u32x16}
 };
 
 use rand::prelude::*;
+use serde::{ser::{Serialize, SerializeSeq, SerializeStruct}, Deserialize};
 
 use crate::{Array, Mask};
 
@@ -97,6 +97,96 @@ fn calculate_register_count(shape: &[usize]) -> usize {
     }
 
     register_count
+}
+
+struct DataSerializeWrapper<'a, const D: usize>(&'a Array<D>);
+
+impl<'a, const D: usize> Serialize for DataSerializeWrapper<'a, D> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer {
+        let mut seq = serializer.serialize_seq(Some(self.0.number_of_elements()))?;
+        let registers_per_row = self.0.shape.last().unwrap().div_ceil(16);
+
+        for (i, register) in self.0.data.iter().enumerate() {
+            let mut limit = 16;
+
+            // checks if current register is the last register in its row
+            if ((i + 1) % registers_per_row) == 0 {
+                limit = ((self.0.shape.last().unwrap() - 1) % 16) + 1;
+            }
+
+            for d in m512_to_array(*register)[0..limit].iter() {
+                seq.serialize_element(d)?;
+            }
+        }
+
+        seq.end()
+    }
+}
+
+impl<const D: usize> Serialize for Array<D> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer {
+        
+        let mut state = serializer.serialize_struct("Array", 2)?;
+        state.serialize_field("data", &DataSerializeWrapper(self))?;
+
+        let shape_vec: Vec<usize> = self.shape.into();
+        state.serialize_field("shape", &shape_vec)?;
+
+        state.end()
+    }
+}
+
+#[derive(Deserialize)]
+struct ArrayDeserializerProxy {
+    data: Vec<f32>,
+    shape: Vec<usize>
+}
+
+impl<'de, const D: usize> Deserialize<'de> for Array<D> {
+    fn deserialize<De>(deserializer: De) -> Result<Self, De::Error>
+    where
+        De: serde::Deserializer<'de> {
+        let proxy = ArrayDeserializerProxy::deserialize(deserializer)?;
+        assert_eq!(proxy.shape.len(), D);
+
+        let mut shape = [0; D];
+        shape.copy_from_slice(&proxy.shape[..D]);
+
+        let registers_per_row = shape.last().unwrap().div_ceil(16);
+        let mut register_count = registers_per_row;
+
+        for d in shape[0..D-1].iter() {
+            register_count *= d;
+        }
+
+        let mut element_index = 0;
+        let mut data = vec![array_to_m512([0.0; 16]); register_count];
+
+        for register_index in 0..register_count {
+            let mut limit = 16;
+
+            // checks if current register is the last register in its row
+            if ((register_index + 1) % registers_per_row) == 0 {
+                limit = ((shape.last().unwrap() - 1) % 16) + 1;
+            }
+
+            let content = &proxy.data[element_index..element_index + limit];
+            element_index += limit;
+
+            let mut register_content = [0.0; 16];
+            register_content[..content.len()].copy_from_slice(content);
+
+            data[register_index] = array_to_m512(register_content);
+        }
+
+        Ok(
+            Array { data, shape }
+        )
+    }
 }
 
 impl<const D: usize> Array<D> {

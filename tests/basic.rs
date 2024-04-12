@@ -31,12 +31,48 @@ fn conversion1d() {
 }
 
 #[test]
+fn serde1d() {
+    for i in 0..64 {
+        let data = get_random_f32_vec(0, i);
+        let converted: Array<1> = data.clone().into();
+
+        let json = serde_json::to_string(&converted).unwrap();
+        let deserialized: Array<1> = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(converted.get_shape(), deserialized.get_shape());
+
+        let converted_back: Vec<f32> = deserialized.into();
+
+        assert_eq!(converted_back, data);
+    }
+}
+
+#[test]
 fn conversion2d() {
     for i in 1..32 {
         for j in 1..32 {
             let data = get_random_f32_vec(0, i * j);
             let converted: Array<2> = Array::<2>::from_vec(&data, [i, j]);
             let converted_back: Vec<f32> = converted.into();
+
+            assert_eq!(converted_back, data);
+        }
+    }
+}
+
+#[test]
+fn serde2d() {
+    for i in 1..32 {
+        for j in 1..32 {
+            let data = get_random_f32_vec(0, i * j);
+            let converted: Array<2> = Array::<2>::from_vec(&data, [i, j]);
+
+            let json = serde_json::to_string(&converted).unwrap();
+            let deserialized: Array<2> = serde_json::from_str(&json).unwrap();
+
+            assert_eq!(converted.get_shape(), deserialized.get_shape());
+
+            let converted_back: Vec<f32> = deserialized.into();
 
             assert_eq!(converted_back, data);
         }
