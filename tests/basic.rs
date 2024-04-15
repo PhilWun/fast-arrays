@@ -17,7 +17,7 @@ limitations under the License.
 mod utils;
 
 use fast_arrays::{Array, Mask};
-use utils::{get_random_f32_vec, get_random_bool_vec};
+use utils::{get_random_bool_vec, get_random_f32_vec};
 
 #[test]
 fn conversion1d() {
@@ -122,7 +122,9 @@ fn from_value2d() {
 #[test]
 fn random1d() {
     for i in 0..64 {
-        let array: Vec<f32> = Array::random_uniform(&[i], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]).into();
+        let array: Vec<f32> =
+            Array::random_uniform(&[i], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
+                .into();
 
         for v in array {
             assert!(v >= 0.0 && v <= 1.0);
@@ -134,7 +136,11 @@ fn random1d() {
 fn random2d() {
     for i in 0..32 {
         for j in 0..32 {
-            let array: Vec<f32> = Array::random_uniform(&[i, j], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]).into();
+            let array: Vec<f32> = Array::random_uniform(
+                &[i, j],
+                [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+            )
+            .into();
 
             for v in array {
                 assert!(v >= 0.0 && v <= 1.0);
@@ -348,7 +354,12 @@ fn copy_masked() {
 
         let result: Vec<f32> = array1.into();
 
-        for (((r, m), d1), d2) in result.iter().zip(mask_data.iter()).zip(data1.iter()).zip(data2.iter()) {
+        for (((r, m), d1), d2) in result
+            .iter()
+            .zip(mask_data.iter())
+            .zip(data1.iter())
+            .zip(data2.iter())
+        {
             if *m {
                 assert_eq!(*r, *d2);
             } else {
@@ -389,7 +400,12 @@ fn copy_masked2() {
 
         let result: Vec<f32> = array1.into();
 
-        for (((r, m), d2), d3) in result.iter().zip(mask_data.iter()).zip(data2.iter()).zip(data3.iter()) {
+        for (((r, m), d2), d3) in result
+            .iter()
+            .zip(mask_data.iter())
+            .zip(data2.iter())
+            .zip(data3.iter())
+        {
             if *m {
                 assert_eq!(*r, *d3);
             } else {

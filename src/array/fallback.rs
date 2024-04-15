@@ -31,7 +31,7 @@ impl From<Vec<f32>> for Array<1> {
 
         Array {
             data: value,
-            shape: [len]
+            shape: [len],
         }
     }
 }
@@ -47,40 +47,91 @@ fn calculate_size(shape: &[usize]) -> usize {
 }
 
 fn assert_same_shape2<const D: usize>(a: &Array<D>, b: &Array<D>) {
-    assert_eq!(a.shape, b.shape, "the lengths of array one and two don't match: {:?} != {:?}", a.shape, b.shape);
+    assert_eq!(
+        a.shape, b.shape,
+        "the lengths of array one and two don't match: {:?} != {:?}",
+        a.shape, b.shape
+    );
 }
 
 fn assert_same_shape_mask<const D: usize>(a: &Array<D>, mask: &Mask<D>) {
-    assert_eq!(&a.shape, mask.get_shape(), "the shapes of the array and the mask don't match: {:?} != {:?}", a.shape, mask.get_shape());
+    assert_eq!(
+        &a.shape,
+        mask.get_shape(),
+        "the shapes of the array and the mask don't match: {:?} != {:?}",
+        a.shape,
+        mask.get_shape()
+    );
 }
 
 fn assert_same_shape_with_mask2<const D: usize>(a: &Array<D>, b: &Array<D>, mask: &Mask<D>) {
-    assert_eq!(a.shape, b.shape, "the lengths of array one and two don't match: {:?} != {:?}", a.shape, b.shape);
-    assert_eq!(&a.shape, mask.get_shape(), "the lengths of array one and mask don't match: {:?} != {:?}", a.shape, mask.get_shape());
+    assert_eq!(
+        a.shape, b.shape,
+        "the lengths of array one and two don't match: {:?} != {:?}",
+        a.shape, b.shape
+    );
+    assert_eq!(
+        &a.shape,
+        mask.get_shape(),
+        "the lengths of array one and mask don't match: {:?} != {:?}",
+        a.shape,
+        mask.get_shape()
+    );
 }
 
 fn assert_same_shape3<const D: usize>(a: &Array<D>, b: &Array<D>, c: &Array<D>) {
-    assert_eq!(a.shape, b.shape, "the lengths of array one and two don't match: {:?} != {:?}", a.shape, b.shape);
-    assert_eq!(b.shape, c.shape, "the lengths of array two and three don't match: {:?} != {:?}", b.shape, c.shape);
+    assert_eq!(
+        a.shape, b.shape,
+        "the lengths of array one and two don't match: {:?} != {:?}",
+        a.shape, b.shape
+    );
+    assert_eq!(
+        b.shape, c.shape,
+        "the lengths of array two and three don't match: {:?} != {:?}",
+        b.shape, c.shape
+    );
 }
 
-fn assert_same_shape_with_mask3<const D: usize>(a: &Array<D>, b: &Array<D>, c: &Array<D>, mask: &Mask<D>) {
-    assert_eq!(a.shape, b.shape, "the lengths of array one and two don't match: {:?} != {:?}", a.shape, b.shape);
-    assert_eq!(b.shape, c.shape, "the lengths of array two and three don't match: {:?} != {:?}", b.shape, c.shape);
-    assert_eq!(&a.shape, mask.get_shape(), "the lengths of array one and mask don't match: {:?} != {:?}", a.shape, mask.get_shape());
+fn assert_same_shape_with_mask3<const D: usize>(
+    a: &Array<D>,
+    b: &Array<D>,
+    c: &Array<D>,
+    mask: &Mask<D>,
+) {
+    assert_eq!(
+        a.shape, b.shape,
+        "the lengths of array one and two don't match: {:?} != {:?}",
+        a.shape, b.shape
+    );
+    assert_eq!(
+        b.shape, c.shape,
+        "the lengths of array two and three don't match: {:?} != {:?}",
+        b.shape, c.shape
+    );
+    assert_eq!(
+        &a.shape,
+        mask.get_shape(),
+        "the lengths of array one and mask don't match: {:?} != {:?}",
+        a.shape,
+        mask.get_shape()
+    );
 }
 
 #[derive(Serialize)]
 struct ArraySerializerProxy<'a> {
     data: &'a Vec<f32>,
-    shape: Vec<usize>
+    shape: Vec<usize>,
 }
 
 impl<const D: usize> Serialize for Array<D> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: serde::Serializer {
-        let proxy = ArraySerializerProxy { data: &self.data, shape: self.shape.into() };
+        S: serde::Serializer,
+    {
+        let proxy = ArraySerializerProxy {
+            data: &self.data,
+            shape: self.shape.into(),
+        };
         proxy.serialize(serializer)
     }
 }
@@ -88,22 +139,24 @@ impl<const D: usize> Serialize for Array<D> {
 #[derive(Deserialize)]
 struct ArrayDeserializerProxy {
     data: Vec<f32>,
-    shape: Vec<usize>
+    shape: Vec<usize>,
 }
 
 impl<'de, const D: usize> Deserialize<'de> for Array<D> {
     fn deserialize<De>(deserializer: De) -> Result<Self, De::Error>
     where
-        De: serde::Deserializer<'de> {
+        De: serde::Deserializer<'de>,
+    {
         let proxy = ArrayDeserializerProxy::deserialize(deserializer)?;
         assert_eq!(proxy.shape.len(), D);
 
         let mut shape = [0; D];
         shape.copy_from_slice(&proxy.shape[..D]);
 
-        Ok(
-            Array { data: proxy.data, shape }
-        )
+        Ok(Array {
+            data: proxy.data,
+            shape,
+        })
     }
 }
 
@@ -202,7 +255,12 @@ impl<const D: usize> Array<D> {
     pub fn copy_masked(&mut self, other: &Array<D>, mask: &Mask<D>) {
         assert_same_shape_with_mask2(&self, other, mask);
 
-        for ((d1, d2), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.get_masks().iter()) {
+        for ((d1, d2), m) in self
+            .data
+            .iter_mut()
+            .zip(other.data.iter())
+            .zip(mask.get_masks().iter())
+        {
             if *m {
                 *d1 = *d2;
             }
@@ -213,7 +271,13 @@ impl<const D: usize> Array<D> {
     pub fn copy_masked2(&mut self, other1: &Array<D>, other2: &Array<D>, mask: &Mask<D>) {
         assert_same_shape_with_mask3(&self, other1, other2, mask);
 
-        for (((d1, d2), d3), m) in self.data.iter_mut().zip(other1.data.iter()).zip(other2.data.iter()).zip(mask.get_masks().iter()) {
+        for (((d1, d2), d3), m) in self
+            .data
+            .iter_mut()
+            .zip(other1.data.iter())
+            .zip(other2.data.iter())
+            .zip(mask.get_masks().iter())
+        {
             if *m {
                 *d1 = *d3;
             } else {
@@ -240,7 +304,12 @@ impl<const D: usize> Array<D> {
     pub fn add_in_place_masked(&mut self, other: &Self, mask: &Mask<D>) {
         assert_same_shape_with_mask2(&self, &other, mask);
 
-        for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.get_masks().iter()) {
+        for ((l, r), m) in self
+            .data
+            .iter_mut()
+            .zip(other.data.iter())
+            .zip(mask.get_masks().iter())
+        {
             if *m {
                 *l = *l + *r;
             }
@@ -250,7 +319,12 @@ impl<const D: usize> Array<D> {
     pub fn add_out_of_place(&self, other: &Self, output: &mut Self) {
         assert_same_shape3(self, other, output);
 
-        for ((l, r), o) in self.data.iter().zip(other.data.iter()).zip(output.data.iter_mut()) {
+        for ((l, r), o) in self
+            .data
+            .iter()
+            .zip(other.data.iter())
+            .zip(output.data.iter_mut())
+        {
             *o = *l + *r;
         }
     }
@@ -273,7 +347,12 @@ impl<const D: usize> Array<D> {
     pub fn sub_in_place_masked(&mut self, other: &Self, mask: &Mask<D>) {
         assert_same_shape_with_mask2(&self, &other, mask);
 
-        for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.get_masks().iter()) {
+        for ((l, r), m) in self
+            .data
+            .iter_mut()
+            .zip(other.data.iter())
+            .zip(mask.get_masks().iter())
+        {
             if *m {
                 *l = *l - *r;
             }
@@ -283,7 +362,12 @@ impl<const D: usize> Array<D> {
     pub fn sub_out_of_place(&self, other: &Self, output: &mut Self) {
         assert_same_shape3(self, other, output);
 
-        for ((l, r), o) in self.data.iter().zip(other.data.iter()).zip(output.data.iter_mut()) {
+        for ((l, r), o) in self
+            .data
+            .iter()
+            .zip(other.data.iter())
+            .zip(output.data.iter_mut())
+        {
             *o = *l - *r;
         }
     }
@@ -306,7 +390,12 @@ impl<const D: usize> Array<D> {
     pub fn mul_in_place_masked(&mut self, other: &Self, mask: &Mask<D>) {
         assert_same_shape_with_mask2(&self, &other, mask);
 
-        for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.get_masks().iter()) {
+        for ((l, r), m) in self
+            .data
+            .iter_mut()
+            .zip(other.data.iter())
+            .zip(mask.get_masks().iter())
+        {
             if *m {
                 *l = *l * *r;
             }
@@ -316,7 +405,12 @@ impl<const D: usize> Array<D> {
     pub fn mul_out_of_place(&self, other: &Self, output: &mut Self) {
         assert_same_shape3(self, other, output);
 
-        for ((l, r), o) in self.data.iter().zip(other.data.iter()).zip(output.data.iter_mut()) {
+        for ((l, r), o) in self
+            .data
+            .iter()
+            .zip(other.data.iter())
+            .zip(output.data.iter_mut())
+        {
             *o = *l * *r;
         }
     }
@@ -339,7 +433,12 @@ impl<const D: usize> Array<D> {
     pub fn div_in_place_masked(&mut self, other: &Self, mask: &Mask<D>) {
         assert_same_shape_with_mask2(&self, &other, mask);
 
-        for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.get_masks().iter()) {
+        for ((l, r), m) in self
+            .data
+            .iter_mut()
+            .zip(other.data.iter())
+            .zip(mask.get_masks().iter())
+        {
             if *m {
                 *l = *l / *r;
             }
@@ -349,7 +448,12 @@ impl<const D: usize> Array<D> {
     pub fn div_out_of_place(&self, other: &Self, output: &mut Self) {
         assert_same_shape3(self, other, output);
 
-        for ((l, r), o) in self.data.iter().zip(other.data.iter()).zip(output.data.iter_mut()) {
+        for ((l, r), o) in self
+            .data
+            .iter()
+            .zip(other.data.iter())
+            .zip(output.data.iter_mut())
+        {
             *o = *l / *r;
         }
     }
@@ -372,7 +476,12 @@ impl<const D: usize> Array<D> {
     pub fn max_in_place_masked(&mut self, other: &Self, mask: &Mask<D>) {
         assert_same_shape_with_mask2(&self, &other, mask);
 
-        for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.get_masks().iter()) {
+        for ((l, r), m) in self
+            .data
+            .iter_mut()
+            .zip(other.data.iter())
+            .zip(mask.get_masks().iter())
+        {
             if *m {
                 *l = l.max(*r);
             }
@@ -382,7 +491,12 @@ impl<const D: usize> Array<D> {
     pub fn max_out_of_place(&self, other: &Self, output: &mut Self) {
         assert_same_shape3(self, other, output);
 
-        for ((l, r), o) in self.data.iter().zip(other.data.iter()).zip(output.data.iter_mut()) {
+        for ((l, r), o) in self
+            .data
+            .iter()
+            .zip(other.data.iter())
+            .zip(output.data.iter_mut())
+        {
             *o = l.max(*r);
         }
     }
@@ -428,7 +542,12 @@ impl<const D: usize> Array<D> {
     pub fn min_in_place_masked(&mut self, other: &Self, mask: &Mask<D>) {
         assert_same_shape_with_mask2(&self, &other, mask);
 
-        for ((l, r), m) in self.data.iter_mut().zip(other.data.iter()).zip(mask.get_masks().iter()) {
+        for ((l, r), m) in self
+            .data
+            .iter_mut()
+            .zip(other.data.iter())
+            .zip(mask.get_masks().iter())
+        {
             if *m {
                 *l = l.min(*r);
             }
@@ -438,7 +557,12 @@ impl<const D: usize> Array<D> {
     pub fn min_out_of_place(&self, other: &Self, output: &mut Self) {
         assert_same_shape3(self, other, output);
 
-        for ((l, r), o) in self.data.iter().zip(other.data.iter()).zip(output.data.iter_mut()) {
+        for ((l, r), o) in self
+            .data
+            .iter()
+            .zip(other.data.iter())
+            .zip(output.data.iter_mut())
+        {
             *o = l.min(*r);
         }
     }
@@ -565,7 +689,7 @@ impl<const D: usize> Array<D> {
         new_array
     }
 
-    pub fn fmadd_in_place(&mut self, a: &Self, b: &Self)  {
+    pub fn fmadd_in_place(&mut self, a: &Self, b: &Self) {
         assert_same_shape3(self, a, b);
 
         for ((a, b), c) in a.data.iter().zip(b.data.iter()).zip(self.data.iter_mut()) {
@@ -573,10 +697,16 @@ impl<const D: usize> Array<D> {
         }
     }
 
-    pub fn fmadd_in_place_masked(&mut self, a: &Self, b: &Self, mask: &Mask<D>)  {
+    pub fn fmadd_in_place_masked(&mut self, a: &Self, b: &Self, mask: &Mask<D>) {
         assert_same_shape_with_mask3(self, a, b, mask);
 
-        for (((a, b), c), m) in a.data.iter().zip(b.data.iter()).zip(self.data.iter_mut()).zip(mask.get_masks().iter()) {
+        for (((a, b), c), m) in a
+            .data
+            .iter()
+            .zip(b.data.iter())
+            .zip(self.data.iter_mut())
+            .zip(mask.get_masks().iter())
+        {
             if *m {
                 *c = *a * *b + *c;
             }
@@ -590,7 +720,7 @@ impl<const D: usize> Array<D> {
         new_array
     }
 
-    pub fn fmadd_scalar_in_place(&mut self, a: &Self, scalar: f32)  {
+    pub fn fmadd_scalar_in_place(&mut self, a: &Self, scalar: f32) {
         assert_same_shape2(self, a);
 
         for (a, b) in a.data.iter().zip(self.data.iter_mut()) {
@@ -598,10 +728,15 @@ impl<const D: usize> Array<D> {
         }
     }
 
-    pub fn fmadd_scalar_in_place_masked(&mut self, a: &Self, scalar: f32, mask: &Mask<D>)  {
+    pub fn fmadd_scalar_in_place_masked(&mut self, a: &Self, scalar: f32, mask: &Mask<D>) {
         assert_same_shape_with_mask2(self, a, mask);
 
-        for ((a, c), m) in a.data.iter().zip(self.data.iter_mut()).zip(mask.get_masks().iter()) {
+        for ((a, c), m) in a
+            .data
+            .iter()
+            .zip(self.data.iter_mut())
+            .zip(mask.get_masks().iter())
+        {
             if *m {
                 *c = *a * scalar + *c;
             }
@@ -722,10 +857,20 @@ impl<const D: usize> Array<D> {
         Mask::new_from_data(a.shape, data)
     }
 
-    fn compare_in_place(a: &Array<D>, b: &Array<D>, mask: &mut Mask<D>, func: fn(&f32, &f32) -> bool) {
+    fn compare_in_place(
+        a: &Array<D>,
+        b: &Array<D>,
+        mask: &mut Mask<D>,
+        func: fn(&f32, &f32) -> bool,
+    ) {
         assert_same_shape_with_mask2(a, b, &mask);
 
-        for ((d1, d2), m) in a.data.iter().zip(b.data.iter()).zip(mask.get_masks_mut().iter_mut()) {
+        for ((d1, d2), m) in a
+            .data
+            .iter()
+            .zip(b.data.iter())
+            .zip(mask.get_masks_mut().iter_mut())
+        {
             *m = func(d1, d2);
         }
     }
@@ -740,9 +885,14 @@ impl<const D: usize> Array<D> {
         Mask::new_from_data(a.shape, data)
     }
 
-    fn compare_scalar_in_place(a: &Array<D>, scalar: f32, mask: &mut Mask<D>, func: fn(&f32, &f32) -> bool) {
+    fn compare_scalar_in_place(
+        a: &Array<D>,
+        scalar: f32,
+        mask: &mut Mask<D>,
+        func: fn(&f32, &f32) -> bool,
+    ) {
         assert_eq!(&a.shape, mask.get_shape());
-        
+
         for (d, m) in a.data.iter().zip(mask.get_masks_mut().iter_mut()) {
             *m = func(d, &scalar);
         }
@@ -861,7 +1011,10 @@ impl<const D: usize> Array<D> {
 impl Array<1> {
     pub fn get(&self, index: usize) -> f32 {
         if index >= self.shape[0] {
-            panic!("tried to get index {}, but the array has only {} element(s)", index, self.shape[0]);
+            panic!(
+                "tried to get index {}, but the array has only {} element(s)",
+                index, self.shape[0]
+            );
         }
 
         self.data[index]
@@ -869,7 +1022,10 @@ impl Array<1> {
 
     pub fn set(&mut self, index: usize, value: f32) {
         if index >= self.shape[0] {
-            panic!("tried to set index {}, but the array has only {} element(s)", index, self.shape[0]);
+            panic!(
+                "tried to set index {}, but the array has only {} element(s)",
+                index, self.shape[0]
+            );
         }
 
         self.data[index] = value;
@@ -887,8 +1043,15 @@ impl Array<1> {
 
     /// Copy the array `k`-times into `output`
     pub fn tile_in_place(&self, k: usize, output: &mut Array<1>) {
-        assert!(self.shape[0] % 16 == 0, "the number of elements needs to be a multiple of 16");
-        assert_eq!(self.shape[0] * k, output.shape[0], "the number of elements in output must be k-times more than the elements in this array");
+        assert!(
+            self.shape[0] % 16 == 0,
+            "the number of elements needs to be a multiple of 16"
+        );
+        assert_eq!(
+            self.shape[0] * k,
+            output.shape[0],
+            "the number of elements in output must be k-times more than the elements in this array"
+        );
 
         let self_len = self.data.len();
 
@@ -901,9 +1064,16 @@ impl Array<1> {
     pub fn repeat_in_place(&self, k: usize, output: &mut Array<1>) {
         let self_len = self.shape[0];
 
-        assert!(self_len % 16 == 0, "the number of elements needs to be a multiple of 16");
+        assert!(
+            self_len % 16 == 0,
+            "the number of elements needs to be a multiple of 16"
+        );
         assert!(k % 16 == 0, "k needs to be a multiple of 16");
-        assert_eq!(self_len * k, output.shape[0], "the number of elements in output must be k-times more than the elements in this array");
+        assert_eq!(
+            self_len * k,
+            output.shape[0],
+            "the number of elements in output must be k-times more than the elements in this array"
+        );
 
         let mut index = 0;
 
@@ -947,17 +1117,23 @@ impl Array<2> {
 
         Self {
             data: data.clone(),
-            shape
+            shape,
         }
     }
 
     pub fn get(&self, row: usize, column: usize) -> f32 {
         if row >= self.shape[0] {
-            panic!("tried to get row {}, but the array has only {} row(s)", row, self.shape[0]);
+            panic!(
+                "tried to get row {}, but the array has only {} row(s)",
+                row, self.shape[0]
+            );
         }
 
         if column >= self.shape[1] {
-            panic!("tried to get column {}, but the array has only {} column(s)", column, self.shape[1]);
+            panic!(
+                "tried to get column {}, but the array has only {} column(s)",
+                column, self.shape[1]
+            );
         }
 
         self.data[row * self.shape[1] + column]
@@ -965,11 +1141,17 @@ impl Array<2> {
 
     pub fn set(&mut self, row: usize, column: usize, value: f32) {
         if row >= self.shape[0] {
-            panic!("tried to set row {}, but the array has only {} row(s)", row, self.shape[0]);
+            panic!(
+                "tried to set row {}, but the array has only {} row(s)",
+                row, self.shape[0]
+            );
         }
 
         if column >= self.shape[1] {
-            panic!("tried to set column {}, but the array has only {} column(s)", column, self.shape[1]);
+            panic!(
+                "tried to set column {}, but the array has only {} column(s)",
+                column, self.shape[1]
+            );
         }
 
         self.data[row * self.shape[1] + column] = value;
@@ -1005,7 +1187,9 @@ impl Array<2> {
         for a_row in 0..a_rows {
             for b_column in 0..b_columns {
                 for inner_loop_index in 0..a_columns {
-                    result[a_row * b_columns + b_column] += self.data[a_row * a_columns + inner_loop_index] * matrix_b.data[inner_loop_index * b_columns + b_column];
+                    result[a_row * b_columns + b_column] += self.data
+                        [a_row * a_columns + inner_loop_index]
+                        * matrix_b.data[inner_loop_index * b_columns + b_column];
                 }
             }
         }
@@ -1036,7 +1220,10 @@ impl Array<2> {
         for row in 0..self.shape[0] {
             let data_range = row * self.shape[1]..(row + 1) * self.shape[1];
 
-            for (value, mask) in self.data[data_range.clone()].iter().zip(mask.get_masks()[data_range].iter()) {
+            for (value, mask) in self.data[data_range.clone()]
+                .iter()
+                .zip(mask.get_masks()[data_range].iter())
+            {
                 if *mask {
                     output.data[row] += value;
                 }

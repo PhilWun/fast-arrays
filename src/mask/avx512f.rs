@@ -14,8 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+use serde::{
+    ser::{Serialize, SerializeSeq, SerializeStruct},
+    Deserialize,
+};
 use std::{arch::x86_64::__mmask16, slice::IterMut};
-use serde::{ser::{Serialize, SerializeSeq, SerializeStruct}, Deserialize};
 
 use crate::Mask;
 
@@ -70,7 +73,8 @@ struct DataSerializeWrapper<'a, const D: usize>(&'a Mask<D>);
 impl<'a, const D: usize> Serialize for DataSerializeWrapper<'a, D> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: serde::Serializer {
+        S: serde::Serializer,
+    {
         let mut seq = serializer.serialize_seq(Some(self.0.number_of_elements()))?;
         let registers_per_row = self.0.shape.last().unwrap().div_ceil(16);
 
@@ -94,8 +98,8 @@ impl<'a, const D: usize> Serialize for DataSerializeWrapper<'a, D> {
 impl<const D: usize> Serialize for Mask<D> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: serde::Serializer {
-        
+        S: serde::Serializer,
+    {
         let mut state = serializer.serialize_struct("Array", 2)?;
         state.serialize_field("masks", &DataSerializeWrapper(self))?;
 
@@ -109,13 +113,14 @@ impl<const D: usize> Serialize for Mask<D> {
 #[derive(Deserialize)]
 struct ArrayDeserializerProxy {
     masks: Vec<bool>,
-    shape: Vec<usize>
+    shape: Vec<usize>,
 }
 
 impl<'de, const D: usize> Deserialize<'de> for Mask<D> {
     fn deserialize<De>(deserializer: De) -> Result<Self, De::Error>
     where
-        De: serde::Deserializer<'de> {
+        De: serde::Deserializer<'de>,
+    {
         let proxy = ArrayDeserializerProxy::deserialize(deserializer)?;
         assert_eq!(proxy.shape.len(), D);
 
@@ -125,7 +130,7 @@ impl<'de, const D: usize> Deserialize<'de> for Mask<D> {
         let registers_per_row = shape.last().unwrap().div_ceil(16);
         let mut register_count = registers_per_row;
 
-        for d in shape[0..D-1].iter() {
+        for d in shape[0..D - 1].iter() {
             register_count *= d;
         }
 
@@ -154,9 +159,7 @@ impl<'de, const D: usize> Deserialize<'de> for Mask<D> {
             masks[register_index] = new_mask;
         }
 
-        Ok(
-            Mask { masks, shape }
-        )
+        Ok(Mask { masks, shape })
     }
 }
 
@@ -169,8 +172,15 @@ impl Mask<1> {
 
     /// Copy the mask `k`-times into `output`
     pub fn tile_in_place(&self, k: usize, output: &mut Mask<1>) {
-        assert!(self.shape[0] % 16 == 0, "the number of elements needs to be a multiple of 16");
-        assert_eq!(self.shape[0] * k, output.shape[0], "the number of elements in output must be k-times more than the elements in this mask");
+        assert!(
+            self.shape[0] % 16 == 0,
+            "the number of elements needs to be a multiple of 16"
+        );
+        assert_eq!(
+            self.shape[0] * k,
+            output.shape[0],
+            "the number of elements in output must be k-times more than the elements in this mask"
+        );
 
         let self_masks = self.masks.len();
 
@@ -183,9 +193,16 @@ impl Mask<1> {
     pub fn repeat_in_place(&self, k: usize, output: &mut Mask<1>) {
         let self_len = self.shape[0];
 
-        assert!(self_len % 16 == 0, "the number of elements needs to be a multiple of 16");
+        assert!(
+            self_len % 16 == 0,
+            "the number of elements needs to be a multiple of 16"
+        );
         assert!(k % 16 == 0, "k needs to be a multiple of 16");
-        assert_eq!(self_len * k, output.shape[0], "the number of elements in output must be k-times more than the elements in this array");
+        assert_eq!(
+            self_len * k,
+            output.shape[0],
+            "the number of elements in output must be k-times more than the elements in this array"
+        );
 
         let mut index = 0;
 
@@ -248,7 +265,7 @@ impl Mask<2> {
             for c in 0..masks_per_row {
                 let mut mask = 0;
                 let mut limit = 16;
-            
+
                 // if it is the last mask in the row
                 if (c + 1) % masks_per_row == 0 {
                     limit = (column_count - 1) % 16 + 1;
@@ -265,7 +282,7 @@ impl Mask<2> {
 
         Self {
             masks: new_masks,
-            shape
+            shape,
         }
     }
 
@@ -278,7 +295,7 @@ impl Mask<2> {
 
 /// This struct is used to create a mutable iterator over the masks and automatically zero out unused elements afterwards.
 pub struct MutableMasks<'a, const D: usize> {
-    mask: &'a mut Mask<D>
+    mask: &'a mut Mask<D>,
 }
 
 impl<'a, const D: usize> MutableMasks<'a, D> {
@@ -297,7 +314,7 @@ impl<const D: usize> Mask<D> {
     pub fn zeros(shape: &[usize; D]) -> Self {
         let mut mask_count = shape.last().unwrap().div_ceil(16);
 
-        for i in 0..D-1 {
+        for i in 0..D - 1 {
             mask_count *= shape[i];
         }
 
@@ -305,7 +322,7 @@ impl<const D: usize> Mask<D> {
 
         Self {
             masks,
-            shape: *shape
+            shape: *shape,
         }
     }
 
@@ -313,13 +330,20 @@ impl<const D: usize> Mask<D> {
         let masks_per_row = shape.last().unwrap().div_ceil(16);
         let mut n_masks = masks_per_row;
 
-        for i in 0..D-1 {
+        for i in 0..D - 1 {
             n_masks *= shape[i];
         }
 
-        assert_eq!(n_masks, masks.len(), "length of masks does not equal the expected length");
+        assert_eq!(
+            n_masks,
+            masks.len(),
+            "length of masks does not equal the expected length"
+        );
 
-        let mut new_mask = Mask { masks: masks, shape: shape };
+        let mut new_mask = Mask {
+            masks: masks,
+            shape: shape,
+        };
         new_mask.zero_out_unused_elements();
 
         new_mask
@@ -338,11 +362,15 @@ impl<const D: usize> Mask<D> {
         let masks_per_row = self.shape.last().unwrap().div_ceil(16);
         let mut n_masks = masks_per_row;
 
-        for i in 0..D-1 {
+        for i in 0..D - 1 {
             n_masks *= self.shape[i];
         }
 
-        assert_eq!(self.masks.len(), n_masks, "number of masks does not match the expected number");
+        assert_eq!(
+            self.masks.len(),
+            n_masks,
+            "number of masks does not match the expected number"
+        );
 
         // check that unused bits are 0
         if self.shape.last().unwrap() % 16 == 0 {
@@ -353,12 +381,16 @@ impl<const D: usize> Mask<D> {
         let unused_elements_mask = 0xFFFF << (self.shape.last().unwrap() % 16);
         let mut rows = 1;
 
-        for s in 0..D-1 {
+        for s in 0..D - 1 {
             rows *= self.shape[s];
         }
 
-        for r in 1..rows+1 {
-            assert_eq!(self.masks[r * masks_per_row - 1] & unused_elements_mask, 0, "mask contains unused bits that are set to 1");
+        for r in 1..rows + 1 {
+            assert_eq!(
+                self.masks[r * masks_per_row - 1] & unused_elements_mask,
+                0,
+                "mask contains unused bits that are set to 1"
+            );
         }
     }
 
@@ -374,19 +406,17 @@ impl<const D: usize> Mask<D> {
         let mut rows = 1;
         let masks_per_row = self.shape.last().unwrap().div_ceil(16);
 
-        for s in 0..D-1 {
+        for s in 0..D - 1 {
             rows *= self.shape[s];
         }
 
-        for r in 1..rows+1 {
+        for r in 1..rows + 1 {
             self.masks[r * masks_per_row - 1] &= out_of_bound_mask;
         }
     }
 
     pub fn get_masks_mut(&mut self) -> MutableMasks<D> {
-        MutableMasks {
-            mask: self
-        }
+        MutableMasks { mask: self }
     }
 
     pub fn and(&self, other: &Self) -> Self {
@@ -444,13 +474,15 @@ mod tests {
 
     #[rstest]
     #[should_panic]
-    fn unused_elements_are_zero_1d(#[values(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17)] rows: usize) {
+    fn unused_elements_are_zero_1d(
+        #[values(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17)] rows: usize,
+    ) {
         let n_masks = rows.div_ceil(16);
         let masks = vec![0xFFFF; n_masks];
 
         let mask = Mask {
             masks,
-            shape: [rows]
+            shape: [rows],
         };
 
         mask.assert_invariants_satisfied();
@@ -458,12 +490,14 @@ mod tests {
 
     #[rstest]
     #[should_panic]
-    fn number_of_elements_1d(#[values(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 33)] rows: usize) {
+    fn number_of_elements_1d(
+        #[values(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 33)] rows: usize,
+    ) {
         let masks = vec![0; 2];
 
         let mask = Mask {
             masks,
-            shape: [rows]
+            shape: [rows],
         };
 
         mask.assert_invariants_satisfied();
@@ -471,13 +505,16 @@ mod tests {
 
     #[rstest]
     #[should_panic]
-    fn unused_elements_are_zero_2d(#[values(1, 2, 3)] columns: usize, #[values(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17)] rows: usize) {
+    fn unused_elements_are_zero_2d(
+        #[values(1, 2, 3)] columns: usize,
+        #[values(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17)] rows: usize,
+    ) {
         let n_masks = rows.div_ceil(16) * columns;
         let masks = vec![0xFFFF; n_masks];
 
         let mask = Mask {
             masks,
-            shape: [rows]
+            shape: [rows],
         };
 
         mask.assert_invariants_satisfied();
@@ -485,12 +522,15 @@ mod tests {
 
     #[rstest]
     #[should_panic]
-    fn number_of_elements_2d(#[values(1, 2, 3)] columns: usize, #[values(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 33)] rows: usize) {
+    fn number_of_elements_2d(
+        #[values(1, 2, 3)] columns: usize,
+        #[values(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 33)] rows: usize,
+    ) {
         let masks = vec![0; 2 * columns];
 
         let mask = Mask {
             masks,
-            shape: [rows]
+            shape: [rows],
         };
 
         mask.assert_invariants_satisfied();
@@ -502,19 +542,12 @@ mod tests {
             let n_masks = i.div_ceil(16);
             let masks = vec![0xFFFF; n_masks];
             let shape = [i];
-            let mut mask = Mask {
-                masks,
-                shape
-            };
+            let mut mask = Mask { masks, shape };
 
             mask.zero_out_unused_elements();
 
             for j in 0..n_masks * 16 {
-                let expected_bit = if j < i {
-                    1
-                } else {
-                    0
-                };
+                let expected_bit = if j < i { 1 } else { 0 };
 
                 let actual_bit = (mask.masks[j / 16] >> (j % 16)) & 1;
 
@@ -530,20 +563,13 @@ mod tests {
                 let masks_per_row = j.div_ceil(16);
                 let masks = vec![0xFFFF; i * masks_per_row];
                 let shape = [i, j];
-                let mut mask = Mask {
-                    masks,
-                    shape
-                };
+                let mut mask = Mask { masks, shape };
 
                 mask.zero_out_unused_elements();
 
                 for k in 0..i {
                     for l in 0..masks_per_row * 16 {
-                        let expected_bit = if l < j {
-                            1
-                        } else {
-                            0
-                        };
+                        let expected_bit = if l < j { 1 } else { 0 };
 
                         let actual_bit = (mask.masks[k * masks_per_row + (l / 16)] >> (l % 16)) & 1;
 
@@ -560,21 +586,14 @@ mod tests {
             let n_masks = i.div_ceil(16);
             let masks = vec![0xFFFF; n_masks];
             let shape = [i];
-            let mut mask = Mask {
-                masks,
-                shape
-            };
+            let mut mask = Mask { masks, shape };
 
             for m in mask.get_masks_mut().iter_mut() {
                 *m = 0xFFFF;
             }
 
             for j in 0..n_masks * 16 {
-                let expected_bit = if j < i {
-                    1
-                } else {
-                    0
-                };
+                let expected_bit = if j < i { 1 } else { 0 };
 
                 let actual_bit = (mask.masks[j / 16] >> (j % 16)) & 1;
 
@@ -590,10 +609,7 @@ mod tests {
                 let masks_per_row = j.div_ceil(16);
                 let masks = vec![0; i * masks_per_row];
                 let shape = [i, j];
-                let mut mask = Mask {
-                    masks,
-                    shape
-                };
+                let mut mask = Mask { masks, shape };
 
                 for m in mask.get_masks_mut().iter_mut() {
                     *m = 0xFFFF;
@@ -601,11 +617,7 @@ mod tests {
 
                 for k in 0..i {
                     for l in 0..masks_per_row * 16 {
-                        let expected_bit = if l < j {
-                            1
-                        } else {
-                            0
-                        };
+                        let expected_bit = if l < j { 1 } else { 0 };
 
                         let actual_bit = (mask.masks[k * masks_per_row + (l / 16)] >> (l % 16)) & 1;
 

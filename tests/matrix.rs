@@ -36,7 +36,12 @@ fn matrix_vector_multiplication() {
     }
 }
 
-fn matrix_vector_multiplication_reference(matrix: &Vec<f32>, rows: usize, columns: usize, vector: &Vec<f32>) -> Vec<f32> {
+fn matrix_vector_multiplication_reference(
+    matrix: &Vec<f32>,
+    rows: usize,
+    columns: usize,
+    vector: &Vec<f32>,
+) -> Vec<f32> {
     let mut result = Vec::with_capacity(columns);
 
     for i in 0..rows {
@@ -63,7 +68,8 @@ fn matrix_matrix_multiplication() {
                 let matrix_b: Array<2> = Array::<2>::from_vec(&matrix_b_data, [j, k]);
 
                 let result: Vec<f32> = matrix_a.matrix_multiplication(&matrix_b).into();
-                let target = matrix_matrix_multiplication_reference(&matrix_a_data, i, j, &matrix_b_data, k);
+                let target =
+                    matrix_matrix_multiplication_reference(&matrix_a_data, i, j, &matrix_b_data, k);
 
                 assert_approximate_vector(&result, &target, 0.1);
             }
@@ -71,13 +77,20 @@ fn matrix_matrix_multiplication() {
     }
 }
 
-fn matrix_matrix_multiplication_reference(a: &Vec<f32>, a_rows: usize, a_columns: usize, b: &Vec<f32>, b_columns: usize) -> Vec<f32> {
+fn matrix_matrix_multiplication_reference(
+    a: &Vec<f32>,
+    a_rows: usize,
+    a_columns: usize,
+    b: &Vec<f32>,
+    b_columns: usize,
+) -> Vec<f32> {
     let mut result = vec![0.0; a_rows * b_columns];
 
     for a_row in 0..a_rows {
         for b_column in 0..b_columns {
             for inner_loop_index in 0..a_columns {
-                result[a_row * b_columns + b_column] += a[a_row * a_columns + inner_loop_index] * b[inner_loop_index * b_columns + b_column];
+                result[a_row * b_columns + b_column] += a[a_row * a_columns + inner_loop_index]
+                    * b[inner_loop_index * b_columns + b_column];
             }
         }
     }

@@ -14,11 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use std::arch::x86_64::{__m512, _mm512_add_ps, _mm512_broadcastss_ps, _mm512_castps512_ps128, _mm512_mask_add_ps, _mm512_mask_max_ps, _mm512_mask_min_ps, _mm512_mask_mul_ps, _mm512_max_ps, _mm512_min_ps, _mm512_mul_ps, _mm512_permutexvar_ps, _mm512_reduce_add_ps, _mm512_reduce_max_ps, _mm512_reduce_min_ps, _mm512_reduce_mul_ps};
+use std::arch::x86_64::{
+    __m512, _mm512_add_ps, _mm512_broadcastss_ps, _mm512_castps512_ps128, _mm512_mask_add_ps,
+    _mm512_mask_max_ps, _mm512_mask_min_ps, _mm512_mask_mul_ps, _mm512_max_ps, _mm512_min_ps,
+    _mm512_mul_ps, _mm512_permutexvar_ps, _mm512_reduce_add_ps, _mm512_reduce_max_ps,
+    _mm512_reduce_min_ps, _mm512_reduce_mul_ps,
+};
 
-use crate::{Array, array::avx512f::array_to_m512i};
+use crate::{array::avx512f::array_to_m512i, Array};
 
-use super::{m512_to_array, array_to_m512, assert_same_shape2, reduce};
+use super::{array_to_m512, assert_same_shape2, m512_to_array, reduce};
 
 impl From<Array<1>> for Vec<f32> {
     fn from(value: Array<1>) -> Self {
@@ -71,7 +76,10 @@ impl From<Vec<f32>> for Array<1> {
 impl Array<1> {
     pub fn get(&self, index: usize) -> f32 {
         if index >= self.shape[0] {
-            panic!("tried to get index {}, but the array has only {} element(s)", index, self.shape[0]);
+            panic!(
+                "tried to get index {}, but the array has only {} element(s)",
+                index, self.shape[0]
+            );
         }
 
         let register_index = index / 16;
@@ -84,7 +92,10 @@ impl Array<1> {
 
     pub fn set(&mut self, index: usize, value: f32) {
         if index >= self.shape[0] {
-            panic!("tried to set index {}, but the array has only {} element(s)", index, self.shape[0]);
+            panic!(
+                "tried to set index {}, but the array has only {} element(s)",
+                index, self.shape[0]
+            );
         }
 
         let register_index = index / 16;
@@ -102,7 +113,13 @@ impl Array<1> {
         }
 
         unsafe {
-            let sum_register = reduce(&self.data, self.shape[0], 0.0, _mm512_add_ps, _mm512_mask_add_ps);
+            let sum_register = reduce(
+                &self.data,
+                self.shape[0],
+                0.0,
+                _mm512_add_ps,
+                _mm512_mask_add_ps,
+            );
             _mm512_reduce_add_ps(sum_register)
         }
     }
@@ -113,7 +130,13 @@ impl Array<1> {
         }
 
         unsafe {
-            let product_register = reduce(&self.data, self.shape[0], 1.0, _mm512_mul_ps, _mm512_mask_mul_ps);
+            let product_register = reduce(
+                &self.data,
+                self.shape[0],
+                1.0,
+                _mm512_mul_ps,
+                _mm512_mask_mul_ps,
+            );
             _mm512_reduce_mul_ps(product_register)
         }
     }
@@ -124,7 +147,13 @@ impl Array<1> {
         }
 
         unsafe {
-            let max_register = reduce(&self.data, self.shape[0], f32::MIN, _mm512_max_ps, _mm512_mask_max_ps);
+            let max_register = reduce(
+                &self.data,
+                self.shape[0],
+                f32::MIN,
+                _mm512_max_ps,
+                _mm512_mask_max_ps,
+            );
             _mm512_reduce_max_ps(max_register)
         }
     }
@@ -135,7 +164,13 @@ impl Array<1> {
         }
 
         unsafe {
-            let min_register = reduce(&self.data, self.shape[0], f32::MAX, _mm512_min_ps, _mm512_mask_min_ps);
+            let min_register = reduce(
+                &self.data,
+                self.shape[0],
+                f32::MAX,
+                _mm512_min_ps,
+                _mm512_mask_min_ps,
+            );
             _mm512_reduce_min_ps(min_register)
         }
     }
@@ -155,11 +190,19 @@ impl Array<1> {
         }
 
         unsafe {
-            for (d1, d2) in self.data[0..self.data.len() - 1].iter().zip(other.data[0..other.data.len() - 1].iter()) {
+            for (d1, d2) in self.data[0..self.data.len() - 1]
+                .iter()
+                .zip(other.data[0..other.data.len() - 1].iter())
+            {
                 sum_register = _mm512_add_ps(sum_register, _mm512_mul_ps(*d1, *d2));
             }
 
-            sum_register = _mm512_mask_add_ps(sum_register, last_register_mask, sum_register, _mm512_mul_ps(*self.data.last().unwrap(), *other.data.last().unwrap()));
+            sum_register = _mm512_mask_add_ps(
+                sum_register,
+                last_register_mask,
+                sum_register,
+                _mm512_mul_ps(*self.data.last().unwrap(), *other.data.last().unwrap()),
+            );
 
             _mm512_reduce_add_ps(sum_register)
         }
@@ -167,8 +210,15 @@ impl Array<1> {
 
     /// Copy the array `k`-times into `output`
     pub fn tile_in_place(&self, k: usize, output: &mut Array<1>) {
-        assert!(self.shape[0] % 16 == 0, "the number of elements needs to be a multiple of 16");
-        assert_eq!(self.shape[0] * k, output.shape[0], "the number of elements in output must be k-times more than the elements in this array");
+        assert!(
+            self.shape[0] % 16 == 0,
+            "the number of elements needs to be a multiple of 16"
+        );
+        assert_eq!(
+            self.shape[0] * k,
+            output.shape[0],
+            "the number of elements in output must be k-times more than the elements in this array"
+        );
 
         let self_registers = self.data.len();
 
@@ -181,11 +231,19 @@ impl Array<1> {
     pub fn repeat_in_place(&self, k: usize, output: &mut Array<1>) {
         let self_len = self.shape[0];
 
-        assert!(self_len % 16 == 0, "the number of elements needs to be a multiple of 16");
+        assert!(
+            self_len % 16 == 0,
+            "the number of elements needs to be a multiple of 16"
+        );
         assert!(k % 16 == 0, "k needs to be a multiple of 16");
-        assert_eq!(self_len * k, output.shape[0], "the number of elements in output must be k-times more than the elements in this array");
+        assert_eq!(
+            self_len * k,
+            output.shape[0],
+            "the number of elements in output must be k-times more than the elements in this array"
+        );
 
-        let permutation_indices = array_to_m512i([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0]);
+        let permutation_indices =
+            array_to_m512i([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0]);
         let mut index = 0;
 
         unsafe {
@@ -194,7 +252,8 @@ impl Array<1> {
 
                 for _ in 0..16 {
                     for _ in 0..k / 16 {
-                        output.data[index] = _mm512_broadcastss_ps(_mm512_castps512_ps128(register));
+                        output.data[index] =
+                            _mm512_broadcastss_ps(_mm512_castps512_ps128(register));
                         index += 1;
                     }
 

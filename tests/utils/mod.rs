@@ -14,7 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use rand::{distributions::{Uniform, Distribution}, SeedableRng, Rng};
+use rand::{
+    distributions::{Distribution, Uniform},
+    Rng, SeedableRng,
+};
 use rand_chacha::ChaCha20Rng;
 
 #[allow(dead_code)]
@@ -26,7 +29,7 @@ pub fn get_random_f32_vec(seed: u64, len: usize) -> Vec<f32> {
     for _ in 0..len {
         data.push(distribution.sample(&mut rng));
     }
-    
+
     data
 }
 
@@ -38,7 +41,7 @@ pub fn get_random_bool_vec(seed: u64, len: usize) -> Vec<bool> {
     for _ in 0..len {
         data.push(rng.gen_bool(0.5));
     }
-    
+
     data
 }
 
@@ -53,9 +56,19 @@ pub fn assert_approximate(a: f32, b: f32, epsilon: f32) {
     }
 
     if a == 0.0 || b == 0.0 {
-        assert!((a - b).abs() < epsilon, "difference too big between {} and {}", a, b);
+        assert!(
+            (a - b).abs() < epsilon,
+            "difference too big between {} and {}",
+            a,
+            b
+        );
     } else {
-        assert!((1.0 - (a / b)).abs() < epsilon, "difference too big between {} and {}", a, b);
+        assert!(
+            (1.0 - (a / b)).abs() < epsilon,
+            "difference too big between {} and {}",
+            a,
+            b
+        );
     }
 }
 

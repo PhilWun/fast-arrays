@@ -93,7 +93,10 @@ fn in_place(#[case] test_function: fn(&mut Mask<1>), #[case] target_function: fn
 #[rstest]
 #[case::and(Mask::and_in_place, |a, b| a & b)]
 #[case::or(Mask::or_in_place, |a, b| a | b)]
-fn two_inputs(#[case] test_function: fn(&mut Mask<1>, &Mask<1>), #[case] target_function: fn(bool, bool) -> bool) {
+fn two_inputs(
+    #[case] test_function: fn(&mut Mask<1>, &Mask<1>),
+    #[case] target_function: fn(bool, bool) -> bool,
+) {
     for i in 0..64 {
         let data1 = get_random_bool_vec(0, i);
         let data2 = get_random_bool_vec(1, i);
@@ -136,7 +139,7 @@ fn get() {
         let data = get_random_bool_vec(0, i);
         let converted: Mask<1> = data.clone().into();
         converted.assert_invariants_satisfied();
-        
+
         for j in 0..i {
             assert_eq!(data[j], converted.get(j));
         }

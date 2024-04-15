@@ -14,22 +14,27 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use std::arch::x86_64::{__m512, _mm512_add_ps, _mm512_fmadd_ps, _mm512_mask3_fmadd_ps, _mm512_mask_add_ps, _mm512_mask_max_ps, _mm512_mask_min_ps, _mm512_mask_mul_ps, _mm512_max_ps, _mm512_min_ps, _mm512_mul_ps, _mm512_reduce_add_ps, _mm512_reduce_max_ps, _mm512_reduce_min_ps, _mm512_reduce_mul_ps};
+use std::arch::x86_64::{
+    __m512, _mm512_add_ps, _mm512_fmadd_ps, _mm512_mask3_fmadd_ps, _mm512_mask_add_ps,
+    _mm512_mask_max_ps, _mm512_mask_min_ps, _mm512_mask_mul_ps, _mm512_max_ps, _mm512_min_ps,
+    _mm512_mul_ps, _mm512_reduce_add_ps, _mm512_reduce_max_ps, _mm512_reduce_min_ps,
+    _mm512_reduce_mul_ps,
+};
 
 use crate::{Array, Mask};
 
-use super::{m512_to_array, array_to_m512, reduce};
+use super::{array_to_m512, m512_to_array, reduce};
 
 impl From<Array<2>> for Vec<f32> {
     fn from(value: Array<2>) -> Self {
         let mut converted = Vec::with_capacity(value.shape[0] * value.shape[1]);
         let column_count = value.shape[1];
         let registers_per_row = column_count.div_ceil(16);
-        
+
         for (i, register) in value.data.iter().enumerate() {
             let register = m512_to_array(*register);
             let mut limit = 16;
-            
+
             // if it is the last register in the row
             if (i + 1) % registers_per_row == 0 {
                 limit = (column_count - 1) % 16 + 1;
@@ -60,7 +65,7 @@ impl Array<2> {
                 let mut register = [0.0f32; 16];
 
                 let mut limit = 16;
-            
+
                 // if it is the last register in the row
                 if (c + 1) % registers_per_row == 0 {
                     limit = (column_count - 1) % 16 + 1;
@@ -77,17 +82,23 @@ impl Array<2> {
 
         Self {
             data: new_data,
-            shape
+            shape,
         }
     }
 
     pub fn get(&self, row: usize, column: usize) -> f32 {
         if row >= self.shape[0] {
-            panic!("tried to get row {}, but the array has only {} row(s)", row, self.shape[0]);
+            panic!(
+                "tried to get row {}, but the array has only {} row(s)",
+                row, self.shape[0]
+            );
         }
 
         if column >= self.shape[1] {
-            panic!("tried to get column {}, but the array has only {} column(s)", column, self.shape[1]);
+            panic!(
+                "tried to get column {}, but the array has only {} column(s)",
+                column, self.shape[1]
+            );
         }
 
         let registers_per_row = self.shape[1].div_ceil(16);
@@ -97,11 +108,17 @@ impl Array<2> {
 
     pub fn set(&mut self, row: usize, column: usize, value: f32) {
         if row >= self.shape[0] {
-            panic!("tried to set row {}, but the array has only {} row(s)", row, self.shape[0]);
+            panic!(
+                "tried to set row {}, but the array has only {} row(s)",
+                row, self.shape[0]
+            );
         }
 
         if column >= self.shape[1] {
-            panic!("tried to set column {}, but the array has only {} column(s)", column, self.shape[1]);
+            panic!(
+                "tried to set column {}, but the array has only {} column(s)",
+                column, self.shape[1]
+            );
         }
 
         let registers_per_row = self.shape[1].div_ceil(16);
@@ -127,11 +144,17 @@ impl Array<2> {
                 let start = i * registers_per_row;
                 let end = start + registers_per_row;
 
-                let intermediate_result = reduce(&self.data[start..end], column_count, 0.0, _mm512_add_ps, _mm512_mask_add_ps);
+                let intermediate_result = reduce(
+                    &self.data[start..end],
+                    column_count,
+                    0.0,
+                    _mm512_add_ps,
+                    _mm512_mask_add_ps,
+                );
 
                 sum_register = _mm512_add_ps(sum_register, intermediate_result);
             }
-            
+
             _mm512_reduce_add_ps(sum_register)
         }
     }
@@ -151,11 +174,17 @@ impl Array<2> {
                 let start = i * registers_per_row;
                 let end = start + registers_per_row;
 
-                let intermediate_result = reduce(&self.data[start..end], column_count, 1.0, _mm512_mul_ps, _mm512_mask_mul_ps);
+                let intermediate_result = reduce(
+                    &self.data[start..end],
+                    column_count,
+                    1.0,
+                    _mm512_mul_ps,
+                    _mm512_mask_mul_ps,
+                );
 
                 product_register = _mm512_mul_ps(product_register, intermediate_result);
             }
-            
+
             _mm512_reduce_mul_ps(product_register)
         }
     }
@@ -175,11 +204,17 @@ impl Array<2> {
                 let start = i * registers_per_row;
                 let end = start + registers_per_row;
 
-                let intermediate_result = reduce(&self.data[start..end], column_count, f32::MIN, _mm512_max_ps, _mm512_mask_max_ps);
+                let intermediate_result = reduce(
+                    &self.data[start..end],
+                    column_count,
+                    f32::MIN,
+                    _mm512_max_ps,
+                    _mm512_mask_max_ps,
+                );
 
                 max_register = _mm512_max_ps(max_register, intermediate_result);
             }
-            
+
             _mm512_reduce_max_ps(max_register)
         }
     }
@@ -199,11 +234,17 @@ impl Array<2> {
                 let start = i * registers_per_row;
                 let end = start + registers_per_row;
 
-                let intermediate_result = reduce(&self.data[start..end], column_count, f32::MAX, _mm512_min_ps, _mm512_mask_min_ps);
+                let intermediate_result = reduce(
+                    &self.data[start..end],
+                    column_count,
+                    f32::MAX,
+                    _mm512_min_ps,
+                    _mm512_mask_min_ps,
+                );
 
                 min_register = _mm512_min_ps(min_register, intermediate_result);
             }
-            
+
             _mm512_reduce_min_ps(min_register)
         }
     }
@@ -230,7 +271,12 @@ impl Array<2> {
                     sum = _mm512_fmadd_ps(self.data[i * registers_per_row + j], other.data[j], sum);
                 }
 
-                sum = _mm512_mask3_fmadd_ps(self.data[(i + 1) * registers_per_row - 1], other.data[registers_per_row - 1], sum, last_register_mask);
+                sum = _mm512_mask3_fmadd_ps(
+                    self.data[(i + 1) * registers_per_row - 1],
+                    other.data[registers_per_row - 1],
+                    sum,
+                    last_register_mask,
+                );
 
                 result.push(_mm512_reduce_add_ps(sum));
             }
@@ -312,7 +358,7 @@ impl Array<2> {
 
             let start_column = chunk_column * 16;
             let end_column = ((chunk_column + 1) * 16).min(self.shape[1]);
-            
+
             for i in 0..(end_column - start_column) {
                 for row in 0..chunk_rows {
                     transposed_data.push(transposed_chunks[row][i]);
@@ -322,7 +368,7 @@ impl Array<2> {
 
         Self {
             data: transposed_data,
-            shape: [self.shape[1], self.shape[0]]
+            shape: [self.shape[1], self.shape[0]],
         }
     }
 
@@ -338,16 +384,20 @@ impl Array<2> {
             for row_a in 0..matrix_a.shape[0] {
                 for column_b in 0..column_chunks_b {
                     let mut temp_results = [array_to_m512([0.0; 16]); 16];
-                    let start_column = column_b* 16;
+                    let start_column = column_b * 16;
                     let end_column = ((column_b + 1) * 16).min(matrix_b.shape[1]);
 
                     let matrix_a_index = row_a * column_chunks_a;
 
                     for i in 0..(end_column - start_column) {
                         let matrix_b_index = (column_b * 16 + i) * row_chunks_b;
-                        
+
                         for chunk_inner_loop_index in 0..row_chunks_b {
-                            temp_results[i] = _mm512_fmadd_ps(self.data[matrix_a_index + chunk_inner_loop_index],transposed_b.data[matrix_b_index + chunk_inner_loop_index], temp_results[i]);
+                            temp_results[i] = _mm512_fmadd_ps(
+                                self.data[matrix_a_index + chunk_inner_loop_index],
+                                transposed_b.data[matrix_b_index + chunk_inner_loop_index],
+                                temp_results[i],
+                            );
                         }
                     }
 
@@ -364,7 +414,7 @@ impl Array<2> {
 
         Self {
             data: result_data,
-            shape: [matrix_a.shape[0], matrix_b.shape[1]]
+            shape: [matrix_a.shape[0], matrix_b.shape[1]],
         }
     }
 
@@ -394,7 +444,10 @@ impl Array<2> {
                 let mut sum_register = array_to_m512([0.0; 16]);
                 let data_range = row * registers_per_row..(row + 1) * registers_per_row;
 
-                for (register, mask) in self.data[data_range.clone()].iter().zip(mask.get_masks()[data_range].iter()) {
+                for (register, mask) in self.data[data_range.clone()]
+                    .iter()
+                    .zip(mask.get_masks()[data_range].iter())
+                {
                     sum_register = _mm512_mask_add_ps(sum_register, *mask, sum_register, *register);
                 }
 

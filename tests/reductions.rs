@@ -17,7 +17,7 @@ limitations under the License.
 mod utils;
 
 use fast_arrays::{Array, Mask};
-use utils::{assert_approximate, get_random_f32_vec, get_random_bool_vec};
+use utils::{assert_approximate, get_random_bool_vec, get_random_f32_vec};
 
 use rstest::rstest;
 
@@ -26,7 +26,10 @@ use rstest::rstest;
 #[case::product(Array::<1>::product, product)]
 #[case::max(Array::<1>::max_reduce, max)]
 #[case::min(Array::<1>::min_reduce, min)]
-fn reduction1d_one_input(#[case] test_function: fn(&Array<1>) -> f32, #[case] target_function: fn(&Vec<f32>) -> f32) {
+fn reduction1d_one_input(
+    #[case] test_function: fn(&Array<1>) -> f32,
+    #[case] target_function: fn(&Vec<f32>) -> f32,
+) {
     for i in 0..64 {
         let data = get_random_f32_vec(0, i);
         let array: Array<1> = data.clone().into();
@@ -43,7 +46,10 @@ fn reduction1d_one_input(#[case] test_function: fn(&Array<1>) -> f32, #[case] ta
 #[case::product(Array::<2>::product, product)]
 #[case::max(Array::<2>::max_reduce, max)]
 #[case::min(Array::<2>::min_reduce, min)]
-fn reduction2d_one_input(#[case] test_function: fn(&Array<2>) -> f32, #[case] target_function: fn(&Vec<f32>) -> f32) {
+fn reduction2d_one_input(
+    #[case] test_function: fn(&Array<2>) -> f32,
+    #[case] target_function: fn(&Vec<f32>) -> f32,
+) {
     for i in 1..32 {
         for j in 1..32 {
             let data = get_random_f32_vec(0, i * j);
@@ -59,7 +65,10 @@ fn reduction2d_one_input(#[case] test_function: fn(&Array<2>) -> f32, #[case] ta
 
 #[rstest]
 #[case::dot_product(Array::dot_product, dot_product)]
-fn reduction_two_inputs(#[case] test_function: fn(&Array<1>, &Array<1>) -> f32, #[case] target_function: fn(&Vec<f32>, &Vec<f32>) -> f32) {
+fn reduction_two_inputs(
+    #[case] test_function: fn(&Array<1>, &Array<1>) -> f32,
+    #[case] target_function: fn(&Vec<f32>, &Vec<f32>) -> f32,
+) {
     for i in 0..64 {
         let data1 = get_random_f32_vec(0, i);
         let data2 = get_random_f32_vec(1, i);

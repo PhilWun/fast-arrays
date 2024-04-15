@@ -16,7 +16,10 @@ limitations under the License.
 
 use std::slice::IterMut;
 
-use serde::{ser::{Serialize, SerializeStruct}, Deserialize};
+use serde::{
+    ser::{Serialize, SerializeStruct},
+    Deserialize,
+};
 
 use crate::Mask;
 
@@ -39,8 +42,8 @@ impl From<Vec<bool>> for Mask<1> {
 impl<const D: usize> Serialize for Mask<D> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: serde::Serializer {
-        
+        S: serde::Serializer,
+    {
         let mut state = serializer.serialize_struct("Array", 2)?;
         state.serialize_field("masks", &self.masks)?;
 
@@ -54,22 +57,24 @@ impl<const D: usize> Serialize for Mask<D> {
 #[derive(Deserialize)]
 struct ArrayDeserializerProxy {
     masks: Vec<bool>,
-    shape: Vec<usize>
+    shape: Vec<usize>,
 }
 
 impl<'de, const D: usize> Deserialize<'de> for Mask<D> {
     fn deserialize<De>(deserializer: De) -> Result<Self, De::Error>
     where
-        De: serde::Deserializer<'de> {
+        De: serde::Deserializer<'de>,
+    {
         let proxy = ArrayDeserializerProxy::deserialize(deserializer)?;
         assert_eq!(proxy.shape.len(), D);
 
         let mut shape = [0; D];
         shape.copy_from_slice(&proxy.shape[..D]);
 
-        Ok(
-            Mask { masks: proxy.masks, shape }
-        )
+        Ok(Mask {
+            masks: proxy.masks,
+            shape,
+        })
     }
 }
 
@@ -80,7 +85,11 @@ impl Mask<1> {
 
     /// Copy the mask `k`-times into `output`
     pub fn tile_in_place(&self, k: usize, output: &mut Mask<1>) {
-        assert_eq!(self.shape[0] * k, output.shape[0], "the number of elements in output must be k-times more than the elements in this mask");
+        assert_eq!(
+            self.shape[0] * k,
+            output.shape[0],
+            "the number of elements in output must be k-times more than the elements in this mask"
+        );
         let self_masks = self.masks.len();
 
         for (i, d) in output.masks.iter_mut().enumerate() {
@@ -90,7 +99,11 @@ impl Mask<1> {
 
     /// Repeat each element of the mask `k`-times and store the result in `output`
     pub fn repeat_in_place(&self, k: usize, output: &mut Mask<1>) {
-        assert_eq!(self.shape[0] * k, output.shape[0], "the number of elements in output must be k-times more than the elements in this array");
+        assert_eq!(
+            self.shape[0] * k,
+            output.shape[0],
+            "the number of elements in output must be k-times more than the elements in this array"
+        );
         let mut index = 0;
 
         for i in 0..self.masks.len() {
@@ -134,7 +147,7 @@ impl Mask<2> {
 
         Self {
             masks: data.clone(),
-            shape
+            shape,
         }
     }
 
@@ -145,7 +158,7 @@ impl Mask<2> {
 
 /// This struct is used to create a mutable iterator over the masks and automatically zero out unused elements afterwards.
 pub struct MutableMasks<'a, const D: usize> {
-    mask: &'a mut Mask<D>
+    mask: &'a mut Mask<D>,
 }
 
 impl<'a, const D: usize> MutableMasks<'a, D> {
@@ -164,7 +177,7 @@ impl<const D: usize> Mask<D> {
 
         Self {
             masks: vec![false; n_masks],
-            shape: *shape
+            shape: *shape,
         }
     }
 
@@ -174,10 +187,17 @@ impl<const D: usize> Mask<D> {
         for i in 0..D {
             n_masks *= shape[i];
         }
-        
-        assert_eq!(n_masks, masks.len(), "length of masks does not equal the expected length");
 
-        Mask { masks: masks, shape: shape }
+        assert_eq!(
+            n_masks,
+            masks.len(),
+            "length of masks does not equal the expected length"
+        );
+
+        Mask {
+            masks: masks,
+            shape: shape,
+        }
     }
 
     pub fn get_shape(&self) -> &[usize; D] {
@@ -189,14 +209,10 @@ impl<const D: usize> Mask<D> {
     }
 
     pub fn get_masks_mut(&mut self) -> MutableMasks<D> {
-        MutableMasks {
-            mask: self
-        }
+        MutableMasks { mask: self }
     }
 
-    pub fn assert_invariants_satisfied(&self) {
-
-    }
+    pub fn assert_invariants_satisfied(&self) {}
 
     pub fn and(&self, other: &Self) -> Self {
         let mut clone = self.clone();
@@ -222,7 +238,7 @@ impl<const D: usize> Mask<D> {
 
     pub fn or_in_place(&mut self, other: &Self) {
         assert_eq!(self.shape, other.shape);
-        
+
         for (m1, m2) in self.masks.iter_mut().zip(other.masks.iter()) {
             *m1 = *m1 | *m2;
         }
