@@ -16,6 +16,8 @@ limitations under the License.
 
 use std::slice::IterMut;
 
+use serde::{ser::{Serialize, SerializeStruct}, Deserialize};
+
 use crate::Mask;
 
 impl From<Mask<1>> for Vec<bool> {
@@ -31,6 +33,43 @@ impl From<Vec<bool>> for Mask<1> {
             masks: value,
             shape: [len],
         }
+    }
+}
+
+impl<const D: usize> Serialize for Mask<D> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer {
+        
+        let mut state = serializer.serialize_struct("Array", 2)?;
+        state.serialize_field("masks", &self.masks)?;
+
+        let shape_vec: Vec<usize> = self.shape.into();
+        state.serialize_field("shape", &shape_vec)?;
+
+        state.end()
+    }
+}
+
+#[derive(Deserialize)]
+struct ArrayDeserializerProxy {
+    masks: Vec<bool>,
+    shape: Vec<usize>
+}
+
+impl<'de, const D: usize> Deserialize<'de> for Mask<D> {
+    fn deserialize<De>(deserializer: De) -> Result<Self, De::Error>
+    where
+        De: serde::Deserializer<'de> {
+        let proxy = ArrayDeserializerProxy::deserialize(deserializer)?;
+        assert_eq!(proxy.shape.len(), D);
+
+        let mut shape = [0; D];
+        shape.copy_from_slice(&proxy.shape[..D]);
+
+        Ok(
+            Mask { masks: proxy.masks, shape }
+        )
     }
 }
 

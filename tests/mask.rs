@@ -33,6 +33,44 @@ fn convert() {
     }
 }
 
+#[test]
+fn serde1d() {
+    for i in 0..64 {
+        let data = get_random_bool_vec(0, i);
+        let converted: Mask<1> = data.clone().into();
+
+        let json = serde_json::to_string(&converted).unwrap();
+        let deserialized: Mask<1> = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(converted.get_shape(), deserialized.get_shape());
+
+        let converted_back: Vec<bool> = deserialized.into();
+
+        assert_eq!(converted_back, data);
+    }
+}
+
+#[test]
+fn serde2d() {
+    for i in 1..32 {
+        for j in 1..32 {
+            let data = get_random_bool_vec(0, i * j);
+            let converted: Mask<2> = Mask::<2>::from_vec(&data, [i, j]);
+
+            let json = serde_json::to_string(&converted).unwrap();
+            let deserialized: Mask<2> = serde_json::from_str(&json).unwrap();
+
+            assert_eq!(converted.get_shape(), deserialized.get_shape());
+
+            for i2 in 0..i {
+                for j2 in 0..j {
+                    assert_eq!(converted.get(i2, j2), deserialized.get(i2, j2));
+                }
+            }
+        }
+    }
+}
+
 #[rstest]
 #[case::not(Mask::not_in_place, |x: bool| !x)]
 fn in_place(#[case] test_function: fn(&mut Mask<1>), #[case] target_function: fn(bool) -> bool) {

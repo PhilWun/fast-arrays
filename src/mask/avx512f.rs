@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 use std::{arch::x86_64::__mmask16, slice::IterMut};
+use serde::{ser::{Serialize, SerializeSeq, SerializeStruct}, Deserialize};
 
 use crate::Mask;
 
@@ -61,6 +62,101 @@ impl From<Vec<bool>> for Mask<1> {
             masks,
             shape: [value.len()],
         }
+    }
+}
+
+struct DataSerializeWrapper<'a, const D: usize>(&'a Mask<D>);
+
+impl<'a, const D: usize> Serialize for DataSerializeWrapper<'a, D> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer {
+        let mut seq = serializer.serialize_seq(Some(self.0.number_of_elements()))?;
+        let registers_per_row = self.0.shape.last().unwrap().div_ceil(16);
+
+        for (i, register) in self.0.masks.iter().enumerate() {
+            let mut limit = 16;
+
+            // checks if current register is the last register in its row
+            if ((i + 1) % registers_per_row) == 0 {
+                limit = ((self.0.shape.last().unwrap() - 1) % 16) + 1;
+            }
+
+            for i in 0..limit {
+                seq.serialize_element(&((register & (1 << i)) > 0))?;
+            }
+        }
+
+        seq.end()
+    }
+}
+
+impl<const D: usize> Serialize for Mask<D> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer {
+        
+        let mut state = serializer.serialize_struct("Array", 2)?;
+        state.serialize_field("masks", &DataSerializeWrapper(self))?;
+
+        let shape_vec: Vec<usize> = self.shape.into();
+        state.serialize_field("shape", &shape_vec)?;
+
+        state.end()
+    }
+}
+
+#[derive(Deserialize)]
+struct ArrayDeserializerProxy {
+    masks: Vec<bool>,
+    shape: Vec<usize>
+}
+
+impl<'de, const D: usize> Deserialize<'de> for Mask<D> {
+    fn deserialize<De>(deserializer: De) -> Result<Self, De::Error>
+    where
+        De: serde::Deserializer<'de> {
+        let proxy = ArrayDeserializerProxy::deserialize(deserializer)?;
+        assert_eq!(proxy.shape.len(), D);
+
+        let mut shape = [0; D];
+        shape.copy_from_slice(&proxy.shape[..D]);
+
+        let registers_per_row = shape.last().unwrap().div_ceil(16);
+        let mut register_count = registers_per_row;
+
+        for d in shape[0..D-1].iter() {
+            register_count *= d;
+        }
+
+        let mut element_index = 0;
+        let mut masks = vec![0u16; register_count];
+
+        for register_index in 0..register_count {
+            let mut limit = 16;
+
+            // checks if current register is the last register in its row
+            if ((register_index + 1) % registers_per_row) == 0 {
+                limit = ((shape.last().unwrap() - 1) % 16) + 1;
+            }
+
+            let content = &proxy.masks[element_index..element_index + limit];
+            element_index += limit;
+
+            let mut new_mask = 0u16;
+
+            for (i, mask) in content.iter().enumerate() {
+                if *mask {
+                    new_mask |= 1 << i;
+                }
+            }
+
+            masks[register_index] = new_mask;
+        }
+
+        Ok(
+            Mask { masks, shape }
+        )
     }
 }
 
