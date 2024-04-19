@@ -349,6 +349,14 @@ impl<const D: usize> Mask<D> {
         new_mask
     }
 
+    pub fn copy(&mut self, other: &Mask<D>) {
+        assert_eq!(self.shape, other.shape);
+
+        for (old_mask, new_mask) in self.masks.iter_mut().zip(other.masks.iter()) {
+            *old_mask = *new_mask;
+        }
+    }
+
     pub fn get_shape(&self) -> &[usize; D] {
         &self.shape
     }

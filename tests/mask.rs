@@ -34,6 +34,22 @@ fn convert() {
 }
 
 #[test]
+fn copy() {
+    for i in 0..64 {
+        let data = get_random_bool_vec(0, i);
+        let mask1: Mask<1> = data.clone().into();
+        mask1.assert_invariants_satisfied();
+        
+        let mut mask2 = Mask::<1>::zeros(mask1.get_shape());
+        mask2.copy(&mask1);
+
+        let copied_data: Vec<bool> = mask2.into();
+
+        assert_eq!(copied_data, data);
+    }
+}
+
+#[test]
 fn serde1d() {
     for i in 0..64 {
         let data = get_random_bool_vec(0, i);
