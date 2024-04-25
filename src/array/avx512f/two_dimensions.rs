@@ -14,19 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use std::arch::x86_64::{
+use std::{arch::x86_64::{
     __m512, _mm512_add_ps, _mm512_fmadd_ps, _mm512_mask3_fmadd_ps, _mm512_mask_add_ps,
     _mm512_mask_max_ps, _mm512_mask_min_ps, _mm512_mask_mul_ps, _mm512_max_ps, _mm512_min_ps,
     _mm512_mul_ps, _mm512_reduce_add_ps, _mm512_reduce_max_ps, _mm512_reduce_min_ps,
     _mm512_reduce_mul_ps,
-};
+}, ops::{Deref, DerefMut}};
 
 use crate::{Array, Mask};
 
 use super::{array_to_m512, m512_to_array, reduce};
 
-impl From<Array<2>> for Vec<f32> {
-    fn from(value: Array<2>) -> Self {
+impl<C> From<Array<2, C>> for Vec<f32>
+where
+C: Deref<Target = [__m512]> + Clone
+{
+    fn from(value: Array<2, C>) -> Self {
         let mut converted = Vec::with_capacity(value.shape[0] * value.shape[1]);
         let column_count = value.shape[1];
         let registers_per_row = column_count.div_ceil(16);
@@ -49,7 +52,8 @@ impl From<Array<2>> for Vec<f32> {
     }
 }
 
-impl Array<2> {
+impl Array<2, Vec<__m512>>
+{
     pub fn from_vec(data: &Vec<f32>, shape: [usize; 2]) -> Self {
         assert!(shape[0] > 0);
         assert!(shape[1] > 0);
@@ -85,7 +89,12 @@ impl Array<2> {
             shape,
         }
     }
+}
 
+impl<C> Array<2, C>
+where
+    C: Deref<Target = [__m512]> + Clone
+{
     pub fn get(&self, row: usize, column: usize) -> f32 {
         if row >= self.shape[0] {
             panic!(
@@ -104,29 +113,6 @@ impl Array<2> {
         let registers_per_row = self.shape[1].div_ceil(16);
 
         m512_to_array(self.data[row * registers_per_row + (column / 16)])[column % 16]
-    }
-
-    pub fn set(&mut self, row: usize, column: usize, value: f32) {
-        if row >= self.shape[0] {
-            panic!(
-                "tried to set row {}, but the array has only {} row(s)",
-                row, self.shape[0]
-            );
-        }
-
-        if column >= self.shape[1] {
-            panic!(
-                "tried to set column {}, but the array has only {} column(s)",
-                column, self.shape[1]
-            );
-        }
-
-        let registers_per_row = self.shape[1].div_ceil(16);
-
-        let mut register = m512_to_array(self.data[row * registers_per_row + (column / 16)]);
-        register[column % 16] = value;
-
-        self.data[row * registers_per_row + (column / 16)] = array_to_m512(register);
     }
 
     pub fn sum(&self) -> f32 {
@@ -249,7 +235,7 @@ impl Array<2> {
         }
     }
 
-    pub fn vector_multiplication(&self, other: &Array<1>) -> Array<1> {
+    pub fn vector_multiplication(&self, other: &Array<1, C>) -> Array<1, Vec<__m512>> {
         assert_eq!(self.shape[1], other.shape[0]);
 
         let row_count = self.shape[0];
@@ -330,7 +316,7 @@ impl Array<2> {
         transposed_chunk
     }
 
-    fn get_padded_chunk(array: &Array<2>, row: usize, column: usize) -> [__m512; 16] {
+    fn get_padded_chunk(array: &Array<2, C>, row: usize, column: usize) -> [__m512; 16] {
         let mut padded_chunk = [array_to_m512([0.0; 16]); 16];
         let column_chunks = array.shape[1].div_ceil(16);
         let row_start = row * 16;
@@ -343,7 +329,7 @@ impl Array<2> {
         padded_chunk
     }
 
-    fn transpose(&self) -> Self {
+    fn transpose(&self) -> Array<2, Vec<__m512>> {
         let chunk_rows = self.shape[0].div_ceil(16);
         let chunk_columns = self.shape[1].div_ceil(16);
         let mut transposed_data = Vec::with_capacity(chunk_rows * 16 * self.shape[1]);
@@ -366,13 +352,13 @@ impl Array<2> {
             }
         }
 
-        Self {
+        Array {
             data: transposed_data,
             shape: [self.shape[1], self.shape[0]],
         }
     }
 
-    pub fn matrix_multiplication(&self, matrix_b: &Self) -> Self {
+    pub fn matrix_multiplication(&self, matrix_b: &Self) -> Array<2, Vec<__m512>> {
         let matrix_a = self;
         let column_chunks_a = matrix_a.shape[1].div_ceil(16);
         let row_chunks_b = matrix_b.shape[0].div_ceil(16);
@@ -412,13 +398,16 @@ impl Array<2> {
             }
         }
 
-        Self {
+        Array {
             data: result_data,
             shape: [matrix_a.shape[0], matrix_b.shape[1]],
         }
     }
 
-    pub fn sum_to_row_in_place_masked(&self, mask: &Mask<2>, output: &mut Array<1>) {
+    pub fn sum_to_row_in_place_masked<E>(&self, mask: &Mask<2>, output: &mut Array<1, E>)
+    where
+        E: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
+    {
         assert_eq!(&self.shape, mask.get_shape());
         assert_eq!(output.shape[0], self.shape[1]);
 
@@ -433,7 +422,9 @@ impl Array<2> {
         }
     }
 
-    pub fn sum_to_column_in_place_masked(&self, mask: &Mask<2>, output: &mut Array<1>) {
+    pub fn sum_to_column_in_place_masked<E>(&self, mask: &Mask<2>, output: &mut Array<1, E>)
+    where E: Deref<Target = [__m512]> + DerefMut<Target = [__m512]>
+    {
         assert_eq!(&self.shape, mask.get_shape());
         assert_eq!(output.shape[0], self.shape[0]);
 
@@ -454,5 +445,33 @@ impl Array<2> {
                 output.set(row, _mm512_reduce_add_ps(sum_register));
             }
         }
+    }
+}
+
+impl<C> Array<2, C>
+where
+    C: DerefMut<Target = [__m512]> + Clone
+{
+    pub fn set(&mut self, row: usize, column: usize, value: f32) {
+        if row >= self.shape[0] {
+            panic!(
+                "tried to set row {}, but the array has only {} row(s)",
+                row, self.shape[0]
+            );
+        }
+
+        if column >= self.shape[1] {
+            panic!(
+                "tried to set column {}, but the array has only {} column(s)",
+                column, self.shape[1]
+            );
+        }
+
+        let registers_per_row = self.shape[1].div_ceil(16);
+
+        let mut register = m512_to_array(self.data[row * registers_per_row + (column / 16)]);
+        register[column % 16] = value;
+
+        self.data[row * registers_per_row + (column / 16)] = array_to_m512(register);
     }
 }

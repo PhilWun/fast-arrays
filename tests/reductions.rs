@@ -16,23 +16,31 @@ limitations under the License.
 
 mod utils;
 
+use std::arch::x86_64::__m512;
+
 use fast_arrays::{Array, Mask};
 use utils::{assert_approximate, get_random_bool_vec, get_random_f32_vec};
 
 use rstest::rstest;
 
+mod testtest {
+
+}
 #[rstest]
-#[case::sum(Array::<1>::sum, sum)]
-#[case::product(Array::<1>::product, product)]
-#[case::max(Array::<1>::max_reduce, max)]
-#[case::min(Array::<1>::min_reduce, min)]
-fn reduction1d_one_input(
-    #[case] test_function: fn(&Array<1>) -> f32,
+#[case::sum(Array::<1, _>::sum, sum)]
+#[case::product(Array::<1, _>::product, product)]
+#[case::max(Array::<1, _>::max_reduce, max)]
+#[case::min(Array::<1, _>::min_reduce, min)]
+fn reduction1d_one_input<C>(
+    #[case] test_function: fn(&Array<1, C>) -> f32,
     #[case] target_function: fn(&Vec<f32>) -> f32,
-) {
+)
+where
+    Array<1, C>: From<Vec<f32>>,
+{
     for i in 0..64 {
         let data = get_random_f32_vec(0, i);
-        let array: Array<1> = data.clone().into();
+        let array: Array<1, C> = data.clone().into();
 
         let result = test_function(&array);
         let target = target_function(&data);
@@ -42,18 +50,18 @@ fn reduction1d_one_input(
 }
 
 #[rstest]
-#[case::sum(Array::<2>::sum, sum)]
-#[case::product(Array::<2>::product, product)]
-#[case::max(Array::<2>::max_reduce, max)]
-#[case::min(Array::<2>::min_reduce, min)]
+#[case::sum(Array::<2, Vec<__m512>>::sum, sum)]
+#[case::product(Array::<2, Vec<__m512>>::product, product)]
+#[case::max(Array::<2, Vec<__m512>>::max_reduce, max)]
+#[case::min(Array::<2, Vec<__m512>>::min_reduce, min)]
 fn reduction2d_one_input(
-    #[case] test_function: fn(&Array<2>) -> f32,
+    #[case] test_function: fn(&Array<2, Vec<__m512>>) -> f32,
     #[case] target_function: fn(&Vec<f32>) -> f32,
 ) {
     for i in 1..32 {
         for j in 1..32 {
             let data = get_random_f32_vec(0, i * j);
-            let array: Array<2> = Array::<2>::from_vec(&data, [i, j]);
+            let array = Array::<2, Vec<__m512>>::from_vec(&data, [i, j]);
 
             let result = test_function(&array);
             let target = target_function(&data);
@@ -64,16 +72,19 @@ fn reduction2d_one_input(
 }
 
 #[rstest]
-#[case::dot_product(Array::dot_product, dot_product)]
-fn reduction_two_inputs(
-    #[case] test_function: fn(&Array<1>, &Array<1>) -> f32,
+#[case::dot_product(Array::<1, _>::dot_product, dot_product)]
+fn reduction_two_inputs<C>(
+    #[case] test_function: fn(&Array<1, C>, &Array<1, C>) -> f32,
     #[case] target_function: fn(&Vec<f32>, &Vec<f32>) -> f32,
-) {
+)
+where
+    Array<1, C>: From<Vec<f32>>,
+{
     for i in 0..64 {
         let data1 = get_random_f32_vec(0, i);
         let data2 = get_random_f32_vec(1, i);
-        let array1: Array<1> = data1.clone().into();
-        let array2: Array<1> = data2.clone().into();
+        let array1: Array<1, C> = data1.clone().into();
+        let array2: Array<1, C> = data2.clone().into();
 
         let result = test_function(&array1, &array2);
         let target = target_function(&data1, &data2);
@@ -157,7 +168,7 @@ fn sum_to_row_in_place_masked() {
     for rows in 1..32 {
         for columns in 1..32 {
             let array_data = get_random_f32_vec(0, rows * columns);
-            let array = Array::<2>::from_vec(&array_data, [rows, columns]);
+            let array = Array::<2, _>::from_vec(&array_data, [rows, columns]);
             let mask_data = get_random_bool_vec(0, rows * columns);
             let mask = Mask::<2>::from_vec(&mask_data, [rows, columns]);
             let mut output_array = Array::zeros(&[columns]);
@@ -184,7 +195,7 @@ fn sum_to_column_in_place_masked() {
     for rows in 1..32 {
         for columns in 1..32 {
             let array_data = get_random_f32_vec(0, rows * columns);
-            let array = Array::<2>::from_vec(&array_data, [rows, columns]);
+            let array = Array::<2, _>::from_vec(&array_data, [rows, columns]);
             let mask_data = get_random_bool_vec(0, rows * columns);
             let mask = Mask::<2>::from_vec(&mask_data, [rows, columns]);
             let mut output_array = Array::zeros(&[rows]);
