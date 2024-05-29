@@ -1,5 +1,5 @@
+#![feature(stdarch_x86_avx512)]
 #![feature(portable_simd)]
-#![feature(stdsimd)]
 
 /*
 Copyright 2023 Philipp Wundrack
