@@ -28,18 +28,16 @@ use rstest::rstest;
 #[case::ge(Array::compare_greater_than_or_equal, f32::ge)]
 #[case::lt(Array::compare_less_than, f32::lt)]
 #[case::le(Array::compare_less_than_or_equal, f32::le)]
-fn comparison<C>(
-    #[case] test_function: fn(&Array<1, C>, &Array<1, C>) -> Mask<1>,
+fn comparison(
+    #[case] test_function: fn(&Array<1>, &Array<1>) -> Mask<1>,
     #[case] target_function: fn(&f32, &f32) -> bool,
-) where
-    Array<1, C>: From<Vec<f32>>,
-{
+) {
     for i in 0..64 {
         let data1 = get_random_f32_vec(0, i);
         let data2 = get_random_f32_vec(1, i);
 
-        let array1: Array<1, C> = data1.clone().into();
-        let array2: Array<1, C> = data2.clone().into();
+        let array1: Array<1> = data1.clone().into();
+        let array2: Array<1> = data2.clone().into();
 
         let result = test_function(&array1, &array2);
         result.assert_invariants_satisfied();
@@ -59,17 +57,15 @@ fn comparison<C>(
 #[case::lt(Array::compare_less_than, f32::lt)]
 #[case::le(Array::compare_less_than_or_equal, f32::le)]
 #[should_panic]
-fn comparison_mismatched_shapes<C>(
-    #[case] test_function: fn(&Array<1, C>, &Array<1, C>) -> Mask<1>,
+fn comparison_mismatched_shapes(
+    #[case] test_function: fn(&Array<1>, &Array<1>) -> Mask<1>,
     #[case] target_function: fn(&f32, &f32) -> bool,
-) where
-    Array<1, C>: From<Vec<f32>>,
-{
+) {
     let data1 = get_random_f32_vec(0, 3);
     let data2 = get_random_f32_vec(1, 4);
 
-    let array1: Array<1, C> = data1.clone().into();
-    let array2: Array<1, C> = data2.clone().into();
+    let array1: Array<1> = data1.clone().into();
+    let array2: Array<1> = data2.clone().into();
 
     let result = test_function(&array1, &array2);
     result.assert_invariants_satisfied();
@@ -87,18 +83,16 @@ fn comparison_mismatched_shapes<C>(
 #[case::ge(Array::compare_greater_than_or_equal_in_place, f32::ge)]
 #[case::lt(Array::compare_less_than_in_place, f32::lt)]
 #[case::le(Array::compare_less_than_or_equal_in_place, f32::le)]
-fn comparison_in_place<C>(
-    #[case] test_function: fn(&Array<1, C>, &Array<1, C>, &mut Mask<1>),
+fn comparison_in_place(
+    #[case] test_function: fn(&Array<1>, &Array<1>, &mut Mask<1>),
     #[case] target_function: fn(&f32, &f32) -> bool,
-) where
-    Array<1, C>: From<Vec<f32>>,
-{
+) {
     for i in 0..64 {
         let data1 = get_random_f32_vec(0, i);
         let data2 = get_random_f32_vec(1, i);
 
-        let array1: Array<1, C> = data1.clone().into();
-        let array2: Array<1, C> = data2.clone().into();
+        let array1: Array<1> = data1.clone().into();
+        let array2: Array<1> = data2.clone().into();
 
         let mut mask = Mask::<1>::zeros(&[i]);
         test_function(&array1, &array2, &mut mask);
@@ -120,17 +114,15 @@ fn comparison_in_place<C>(
 #[case::lt(Array::compare_less_than_in_place, f32::lt)]
 #[case::le(Array::compare_less_than_or_equal_in_place, f32::le)]
 #[should_panic]
-fn comparison_mismatched_shapes_in_place<C>(
-    #[case] test_function: fn(&Array<1, C>, &Array<1, C>, &mut Mask<1>),
+fn comparison_mismatched_shapes_in_place(
+    #[case] test_function: fn(&Array<1>, &Array<1>, &mut Mask<1>),
     #[case] target_function: fn(&f32, &f32) -> bool,
-) where
-    Array<1, C>: From<Vec<f32>>,
-{
+) {
     let data1 = get_random_f32_vec(0, 3);
     let data2 = get_random_f32_vec(1, 4);
 
-    let array1: Array<1, C> = data1.clone().into();
-    let array2: Array<1, C> = data2.clone().into();
+    let array1: Array<1> = data1.clone().into();
+    let array2: Array<1> = data2.clone().into();
 
     let mut mask = Mask::<1>::zeros(&[5]);
     test_function(&array1, &array2, &mut mask);
@@ -150,16 +142,14 @@ fn comparison_mismatched_shapes_in_place<C>(
 #[case::ge(Array::compare_scalar_greater_than_or_equal, f32::ge)]
 #[case::lt(Array::compare_scalar_less_than, f32::lt)]
 #[case::le(Array::compare_scalar_less_than_or_equal, f32::le)]
-fn comparison_scalar<C>(
-    #[case] test_function: fn(&Array<1, C>, f32) -> Mask<1>,
+fn comparison_scalar(
+    #[case] test_function: fn(&Array<1>, f32) -> Mask<1>,
     #[case] target_function: fn(&f32, &f32) -> bool,
-) where
-    Array<1, C>: From<Vec<f32>>,
-{
+) {
     for i in 0..64 {
         let data = get_random_f32_vec(0, i);
 
-        let array: Array<1, C> = data.clone().into();
+        let array: Array<1> = data.clone().into();
 
         let result = test_function(&array, 0.0);
         result.assert_invariants_satisfied();
@@ -178,16 +168,14 @@ fn comparison_scalar<C>(
 #[case::ge(Array::compare_scalar_greater_than_or_equal_in_place, f32::ge)]
 #[case::lt(Array::compare_scalar_less_than_in_place, f32::lt)]
 #[case::le(Array::compare_scalar_less_than_or_equal_in_place, f32::le)]
-fn comparison_scalar_in_place<C>(
-    #[case] test_function: fn(&Array<1, C>, f32, &mut Mask<1>),
+fn comparison_scalar_in_place(
+    #[case] test_function: fn(&Array<1>, f32, &mut Mask<1>),
     #[case] target_function: fn(&f32, &f32) -> bool,
-) where
-    Array<1, C>: From<Vec<f32>>,
-{
+) {
     for i in 0..64 {
         let data = get_random_f32_vec(0, i);
 
-        let array: Array<1, C> = data.clone().into();
+        let array: Array<1> = data.clone().into();
         let mut mask = Mask::<1>::zeros(&[i]);
         test_function(&array, 0.0, &mut mask);
         mask.assert_invariants_satisfied();
@@ -208,15 +196,13 @@ fn comparison_scalar_in_place<C>(
 #[case::lt(Array::compare_scalar_less_than_in_place, f32::lt)]
 #[case::le(Array::compare_scalar_less_than_or_equal_in_place, f32::le)]
 #[should_panic]
-fn comparison_scalar_in_place_mismatched_shape<C>(
-    #[case] test_function: fn(&Array<1, C>, f32, &mut Mask<1>),
+fn comparison_scalar_in_place_mismatched_shape(
+    #[case] test_function: fn(&Array<1>, f32, &mut Mask<1>),
     #[case] target_function: fn(&f32, &f32) -> bool,
-) where
-    Array<1, C>: From<Vec<f32>>,
-{
+) {
     let data = get_random_f32_vec(0, 3);
 
-    let array: Array<1, C> = data.clone().into();
+    let array: Array<1> = data.clone().into();
     let mut mask = Mask::<1>::zeros(&[4]);
     test_function(&array, 0.0, &mut mask);
     mask.assert_invariants_satisfied();

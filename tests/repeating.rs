@@ -24,7 +24,7 @@ fn repeat_as_row_in_place() {
     for columns in 1..32 {
         for rows in 1..32 {
             let data = get_random_f32_vec(0, columns);
-            let array_1d: Array<1, _> = data.clone().into();
+            let array_1d: Array<1> = data.clone().into();
             let mut output = Array::zeros(&[rows, columns]);
 
             array_1d.repeat_as_row_in_place(rows, &mut output);
@@ -43,7 +43,7 @@ fn repeat_as_row_in_place_shape_mismatch() {
     for columns in 1..32 {
         for rows in 1..32 {
             let data = get_random_f32_vec(0, rows);
-            let array_1d: Array<1, _> = data.clone().into();
+            let array_1d: Array<1> = data.clone().into();
             let mut output = Array::zeros(&[rows, columns]);
 
             array_1d.repeat_as_column_in_place(columns, &mut output);

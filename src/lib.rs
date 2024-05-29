@@ -22,40 +22,19 @@ mod mask;
 
 #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
 use std::arch::x86_64::__m512;
-use std::ops::Deref;
 
 pub use mask::Mask;
 
-#[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
-pub struct Array<const D: usize, C>
-{
-    data: C,
-    shape: [usize; D],
-}
-
-#[cfg(not(all(target_arch = "x86_64", target_feature = "avx512f")))]
 #[derive(Clone)]
-pub struct Array<const D: usize, C>
-where
-    C: Deref<Target = [f32]>,
-{
+pub struct Array<const D: usize> {
+    #[cfg(all(target_arch = "x86_64", target_feature = "avx512f"))]
+    data: Vec<__m512>,
+    #[cfg(not(all(target_arch = "x86_64", target_feature = "avx512f")))]
     data: Vec<f32>,
     shape: [usize; D],
 }
 
-impl<const D: usize, C> Array<D, C>
-where
-    C: Deref<Target = [__m512]>
-{
-    fn clone(&self) -> Array<D, Vec<__m512>> {
-        Array { data: Vec::from_iter(self.data.iter().map(|x| *x)), shape: self.shape.clone() }
-    }
-}
-
-impl<const D: usize, C> Array<D, C>
-where
-    C: Deref<Target = [__m512]>,
-{
+impl<const D: usize> Array<D> {
     pub fn number_of_elements(&self) -> usize {
         let mut elements_count = 1;
 

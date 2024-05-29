@@ -1,6 +1,6 @@
 [package]
 name = "fast_arrays"
-version = "0.1.22"
+version = "0.1.21"
 edition = "2021"
 license = "Apache-2.0"
 description = "Can be used to perform vectorized calculations on arbitrarily sized 1D and 2D arrays with AVX-512 acceleration."

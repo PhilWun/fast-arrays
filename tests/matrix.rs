@@ -24,9 +24,9 @@ fn matrix_vector_multiplication() {
     for i in 1..32 {
         for j in 1..32 {
             let matrix_data = get_random_f32_vec(0, i * j);
-            let matrix: Array<2, _> = Array::from_vec(&matrix_data, [i, j]);
+            let matrix: Array<2> = Array::<2>::from_vec(&matrix_data, [i, j]);
             let vector_data = get_random_f32_vec(1, j);
-            let vector: Array<1, _> = vector_data.clone().into();
+            let vector: Array<1> = vector_data.clone().into();
 
             let result: Vec<f32> = matrix.vector_multiplication(&vector).into();
             let target = matrix_vector_multiplication_reference(&matrix_data, i, j, &vector_data);
@@ -63,9 +63,9 @@ fn matrix_matrix_multiplication() {
         for j in 1..32 {
             for k in 1..32 {
                 let matrix_a_data = get_random_f32_vec(0, i * j);
-                let matrix_a: Array<2, _> = Array::from_vec(&matrix_a_data, [i, j]);
+                let matrix_a: Array<2> = Array::<2>::from_vec(&matrix_a_data, [i, j]);
                 let matrix_b_data = get_random_f32_vec(0, j * k);
-                let matrix_b: Array<2, _> = Array::from_vec(&matrix_b_data, [j, k]);
+                let matrix_b: Array<2> = Array::<2>::from_vec(&matrix_b_data, [j, k]);
 
                 let result: Vec<f32> = matrix_a.matrix_multiplication(&matrix_b).into();
                 let target =

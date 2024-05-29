@@ -22,7 +22,7 @@ fn main() {
     let len = 1024;
     let iterations = 10_000_000;
     let mut array1 = Array::zeros(&[len]);
-    let array2: Array<1, _> = vec![1.0; len].into();
+    let array2: Array<1> = vec![1.0; len].into();
 
     let time1 = Instant::now();
 

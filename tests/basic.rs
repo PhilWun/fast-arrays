@@ -23,7 +23,7 @@ use utils::{get_random_bool_vec, get_random_f32_vec};
 fn conversion1d() {
     for i in 0..64 {
         let data = get_random_f32_vec(0, i);
-        let converted: Array<1, _> = data.clone().into();
+        let converted: Array<1> = data.clone().into();
         let converted_back: Vec<f32> = converted.into();
 
         assert_eq!(converted_back, data);
@@ -34,10 +34,10 @@ fn conversion1d() {
 fn serde1d() {
     for i in 0..64 {
         let data = get_random_f32_vec(0, i);
-        let converted: Array<1, _> = data.clone().into();
+        let converted: Array<1> = data.clone().into();
 
         let json = serde_json::to_string(&converted).unwrap();
-        let deserialized: Array<1, _> = serde_json::from_str(&json).unwrap();
+        let deserialized: Array<1> = serde_json::from_str(&json).unwrap();
 
         assert_eq!(converted.get_shape(), deserialized.get_shape());
 
@@ -52,7 +52,7 @@ fn conversion2d() {
     for i in 1..32 {
         for j in 1..32 {
             let data = get_random_f32_vec(0, i * j);
-            let converted: Array<2, _> = Array::<2, _>::from_vec(&data, [i, j]);
+            let converted: Array<2> = Array::<2>::from_vec(&data, [i, j]);
             let converted_back: Vec<f32> = converted.into();
 
             assert_eq!(converted_back, data);
@@ -65,10 +65,10 @@ fn serde2d() {
     for i in 1..32 {
         for j in 1..32 {
             let data = get_random_f32_vec(0, i * j);
-            let converted: Array<2, _> = Array::<2, _>::from_vec(&data, [i, j]);
+            let converted: Array<2> = Array::<2>::from_vec(&data, [i, j]);
 
             let json = serde_json::to_string(&converted).unwrap();
-            let deserialized: Array<2, _> = serde_json::from_str(&json).unwrap();
+            let deserialized: Array<2> = serde_json::from_str(&json).unwrap();
 
             assert_eq!(converted.get_shape(), deserialized.get_shape());
 
@@ -153,7 +153,7 @@ fn random2d() {
 fn get() {
     for i in 0..64 {
         let data = get_random_f32_vec(0, i);
-        let array: Array<1, _> = data.clone().into();
+        let array: Array<1> = data.clone().into();
 
         for j in 0..i {
             assert_eq!(array.get(j), *data.get(j).unwrap());
@@ -165,7 +165,7 @@ fn get() {
 #[should_panic]
 fn get_out_of_bounds() {
     let data = get_random_f32_vec(0, 64);
-    let array: Array<1, _> = data.into();
+    let array: Array<1> = data.into();
 
     array.get(64);
 }
@@ -174,7 +174,7 @@ fn get_out_of_bounds() {
 fn set_1d() {
     for i in 0..64 {
         let data = get_random_f32_vec(0, i);
-        let mut array: Array<1, _> = data.clone().into();
+        let mut array: Array<1> = data.clone().into();
 
         for j in 0..i {
             array.set(j, (j + 10) as f32);
@@ -187,7 +187,7 @@ fn set_1d() {
 #[should_panic]
 fn set_1d_out_of_bounds() {
     let data = get_random_f32_vec(0, 64);
-    let mut array: Array<1, _> = data.into();
+    let mut array: Array<1> = data.into();
     array.set(64, 42.0);
 }
 
@@ -196,7 +196,7 @@ fn get_set_2d() {
     for rows in 1..32 {
         for columns in 1..32 {
             let data = get_random_f32_vec(0, rows * columns);
-            let mut array: Array<2, _> = Array::zeros(&[rows, columns]);
+            let mut array: Array<2> = Array::zeros(&[rows, columns]);
 
             for row in 0..rows {
                 for column in 0..columns {
@@ -231,7 +231,7 @@ fn set_2d_out_of_bounds() {
 fn set_all() {
     for i in 0..64 {
         let data = get_random_f32_vec(0, i);
-        let mut array: Array<1, _> = data.clone().into();
+        let mut array: Array<1> = data.clone().into();
 
         array.set_all(42.0);
         let new_data: Vec<f32> = array.into();
@@ -245,7 +245,7 @@ fn set_masked() {
     for i in 0..64 {
         let data = get_random_f32_vec(0, i);
         let mask_data = get_random_bool_vec(1, i);
-        let mut array: Array<1, _> = data.clone().into();
+        let mut array: Array<1> = data.clone().into();
         let mask: Mask<1> = mask_data.clone().into();
 
         array.set_masked(42.0, &mask);
@@ -267,7 +267,7 @@ fn set_masked() {
 fn set_masked_mismatched_shapes() {
     let data = get_random_f32_vec(0, 3);
     let mask_data = get_random_bool_vec(1, 4);
-    let mut array: Array<1, _> = data.clone().into();
+    let mut array: Array<1> = data.clone().into();
     let mask: Mask<1> = mask_data.clone().into();
 
     array.set_masked(42.0, &mask);
@@ -279,7 +279,7 @@ fn set_masked2() {
         let data1 = get_random_f32_vec(0, i);
         let mask_data = get_random_bool_vec(1, i);
 
-        let mut array1: Array<1, _> = data1.clone().into();
+        let mut array1: Array<1> = data1.clone().into();
         let mask: Mask<1> = mask_data.clone().into();
 
         array1.set_masked2(42.0, 43.0, &mask);
@@ -302,7 +302,7 @@ fn set_masked2_mismatched_shapes() {
     let data1 = get_random_f32_vec(0, 3);
     let mask_data = get_random_bool_vec(1, 4);
 
-    let mut array1: Array<1, _> = data1.clone().into();
+    let mut array1: Array<1> = data1.clone().into();
     let mask: Mask<1> = mask_data.clone().into();
 
     array1.set_masked2(42.0, 43.0, &mask);
@@ -314,8 +314,8 @@ fn copy() {
         let data1 = get_random_f32_vec(0, i);
         let data2 = get_random_f32_vec(1, i);
 
-        let mut array1: Array<1, _> = data1.clone().into();
-        let array2: Array<1, _> = data2.clone().into();
+        let mut array1: Array<1> = data1.clone().into();
+        let array2: Array<1> = data2.clone().into();
 
         array1.copy(&array2);
 
@@ -333,8 +333,8 @@ fn copy_mismatched_shapes() {
     let data1 = get_random_f32_vec(0, 3);
     let data2 = get_random_f32_vec(1, 4);
 
-    let mut array1: Array<1, _> = data1.clone().into();
-    let array2: Array<1, _> = data2.clone().into();
+    let mut array1: Array<1> = data1.clone().into();
+    let array2: Array<1> = data2.clone().into();
 
     array1.copy(&array2);
 }
@@ -346,8 +346,8 @@ fn copy_masked() {
         let data2 = get_random_f32_vec(1, i);
         let mask_data = get_random_bool_vec(2, i);
 
-        let mut array1: Array<1, _> = data1.clone().into();
-        let array2: Array<1, _> = data2.clone().into();
+        let mut array1: Array<1> = data1.clone().into();
+        let array2: Array<1> = data2.clone().into();
         let mask: Mask<1> = mask_data.clone().into();
 
         array1.copy_masked(&array2, &mask);
@@ -376,8 +376,8 @@ fn copy_masked_mismatched_shapes() {
     let data2 = get_random_f32_vec(1, 4);
     let mask_data = get_random_bool_vec(2, 5);
 
-    let mut array1: Array<1, _> = data1.clone().into();
-    let array2: Array<1, _> = data2.clone().into();
+    let mut array1: Array<1> = data1.clone().into();
+    let array2: Array<1> = data2.clone().into();
     let mask: Mask<1> = mask_data.clone().into();
 
     array1.copy_masked(&array2, &mask);
@@ -391,9 +391,9 @@ fn copy_masked2() {
         let data3 = get_random_f32_vec(2, i);
         let mask_data = get_random_bool_vec(3, i);
 
-        let mut array1: Array<1, _> = data1.clone().into();
-        let array2: Array<1, _> = data2.clone().into();
-        let array3: Array<1, _> = data3.clone().into();
+        let mut array1: Array<1> = data1.clone().into();
+        let array2: Array<1> = data2.clone().into();
+        let array3: Array<1> = data3.clone().into();
         let mask: Mask<1> = mask_data.clone().into();
 
         array1.copy_masked2(&array2, &array3, &mask);
@@ -423,9 +423,9 @@ fn copy_masked2_mismatched_shapes() {
     let data3 = get_random_f32_vec(2, 4);
     let mask_data = get_random_bool_vec(3, 5);
 
-    let mut array1: Array<1, _> = data1.clone().into();
-    let array2: Array<1, _> = data2.clone().into();
-    let array3: Array<1, _> = data3.clone().into();
+    let mut array1: Array<1> = data1.clone().into();
+    let array2: Array<1> = data2.clone().into();
+    let array3: Array<1> = data3.clone().into();
     let mask: Mask<1> = mask_data.clone().into();
 
     array1.copy_masked2(&array2, &array3, &mask);
@@ -438,7 +438,7 @@ fn tile_in_place() {
             let n = i * 16;
             let k = j * 16;
             let data = get_random_f32_vec(0, n);
-            let array: Array<1, _> = data.clone().into();
+            let array: Array<1> = data.clone().into();
             let mut output = Array::zeros(&[n * k]);
 
             array.tile_in_place(k, &mut output);
@@ -459,7 +459,7 @@ fn repeat_in_place() {
             let n = i * 16;
             let k = j * 16;
             let data = get_random_f32_vec(0, n);
-            let array: Array<1, _> = data.clone().into();
+            let array: Array<1> = data.clone().into();
             let mut output = Array::zeros(&[n * k]);
 
             array.repeat_in_place(k, &mut output);

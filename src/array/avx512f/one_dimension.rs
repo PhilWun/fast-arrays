@@ -14,27 +14,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use std::{arch::x86_64::{
+use std::arch::x86_64::{
     __m512, _mm512_add_ps, _mm512_broadcastss_ps, _mm512_castps512_ps128, _mm512_mask_add_ps,
     _mm512_mask_max_ps, _mm512_mask_min_ps, _mm512_mask_mul_ps, _mm512_max_ps, _mm512_min_ps,
     _mm512_mul_ps, _mm512_permutexvar_ps, _mm512_reduce_add_ps, _mm512_reduce_max_ps,
     _mm512_reduce_min_ps, _mm512_reduce_mul_ps,
-}, ops::{Deref, DerefMut}};
+};
 
 use crate::{array::avx512f::array_to_m512i, Array};
 
 use super::{array_to_m512, assert_same_shape2, m512_to_array, reduce};
 
-impl<C> From<Array<1, C>> for Vec<f32>
-where
-C: Deref<Target = [__m512]>
-{
-    fn from(value: Array<1, C>) -> Self {
+impl From<Array<1>> for Vec<f32> {
+    fn from(value: Array<1>) -> Self {
         let mut converted = vec![0f32; value.shape[0]];
         let mut index: usize = 0;
 
-        for register in value.data.iter() {
-            let register = m512_to_array(*register);
+        for register in value.data {
+            let register = m512_to_array(register);
 
             for i in 0..16 {
                 if index >= value.shape[0] {
@@ -50,8 +47,7 @@ C: Deref<Target = [__m512]>
     }
 }
 
-impl From<Vec<f32>> for Array<1, Vec<__m512>>
-{
+impl From<Vec<f32>> for Array<1> {
     fn from(value: Vec<f32>) -> Self {
         let register_count = value.len().div_ceil(16);
         let mut data: Vec<__m512> = Vec::with_capacity(register_count);
@@ -77,10 +73,7 @@ impl From<Vec<f32>> for Array<1, Vec<__m512>>
     }
 }
 
-impl<C> Array<1, C>
-where
-C: Deref<Target = [__m512]>
-{
+impl Array<1> {
     pub fn get(&self, index: usize) -> f32 {
         if index >= self.shape[0] {
             panic!(
@@ -97,12 +90,21 @@ C: Deref<Target = [__m512]>
         value
     }
 
-    // TODO: add function to get a read only view of a slice of the array
-    pub fn view(&self, start: usize, end: usize) -> Array<1, &[__m512]> {
-        assert_eq!(start % 16, 0);
-        assert_eq!(end % 16, 0);
+    pub fn set(&mut self, index: usize, value: f32) {
+        if index >= self.shape[0] {
+            panic!(
+                "tried to set index {}, but the array has only {} element(s)",
+                index, self.shape[0]
+            );
+        }
 
-        Array { data: &self.data[start / 16..end / 16], shape: self.shape }
+        let register_index = index / 16;
+        let value_index = index % 16;
+
+        let mut new_register = m512_to_array(self.data[register_index]);
+        new_register[value_index] = value;
+
+        self.data[register_index] = array_to_m512(new_register);
     }
 
     pub fn sum(&self) -> f32 {
@@ -207,10 +209,7 @@ C: Deref<Target = [__m512]>
     }
 
     /// Copy the array `k`-times into `output`
-    pub fn tile_in_place<D>(&self, k: usize, output: &mut Array<1, D>)
-    where
-        D: Deref<Target = [__m512]> + DerefMut<Target = [__m512]>
-    {
+    pub fn tile_in_place(&self, k: usize, output: &mut Array<1>) {
         assert!(
             self.shape[0] % 16 == 0,
             "the number of elements needs to be a multiple of 16"
@@ -229,10 +228,7 @@ C: Deref<Target = [__m512]>
     }
 
     /// Repeat each element of the array `k`-times and store the result in `output`
-    pub fn repeat_in_place<D>(&self, k: usize, output: &mut Array<1, D>)
-    where
-        D: Deref<Target = [__m512]> + DerefMut<Target = [__m512]>
-    {
+    pub fn repeat_in_place(&self, k: usize, output: &mut Array<1>) {
         let self_len = self.shape[0];
 
         assert!(
@@ -267,10 +263,7 @@ C: Deref<Target = [__m512]>
         }
     }
 
-    pub fn repeat_as_row_in_place<D>(&self, k: usize, output: &mut Array<2, D>)
-    where
-        D: Deref<Target = [__m512]> + DerefMut<Target = [__m512]>
-    {
+    pub fn repeat_as_row_in_place(&self, k: usize, output: &mut Array<2>) {
         assert_eq!(output.shape[0], k);
         assert_eq!(output.shape[1], self.shape[0]);
 
@@ -281,10 +274,7 @@ C: Deref<Target = [__m512]>
         }
     }
 
-    pub fn repeat_as_column_in_place<D>(&self, k: usize, output: &mut Array<2, D>)
-    where
-        D: Deref<Target = [__m512]> + DerefMut<Target = [__m512]>
-    {
+    pub fn repeat_as_column_in_place(&self, k: usize, output: &mut Array<2>) {
         assert_eq!(output.shape[0], self.shape[0]);
         assert_eq!(output.shape[1], k);
 
@@ -297,27 +287,5 @@ C: Deref<Target = [__m512]>
                 output.data[i * registers_per_row + j] = register;
             }
         }
-    }
-}
-
-impl<C> Array<1, C>
-where
-C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]>
-{
-    pub fn set(&mut self, index: usize, value: f32) {
-        if index >= self.shape[0] {
-            panic!(
-                "tried to set index {}, but the array has only {} element(s)",
-                index, self.shape[0]
-            );
-        }
-
-        let register_index = index / 16;
-        let value_index = index % 16;
-
-        let mut new_register = m512_to_array(self.data[register_index]);
-        new_register[value_index] = value;
-
-        self.data[register_index] = array_to_m512(new_register);
     }
 }

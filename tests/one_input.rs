@@ -16,8 +16,6 @@ limitations under the License.
 
 mod utils;
 
-use std::arch::x86_64::__m512;
-
 use fast_arrays::{Array, Mask};
 use utils::{assert_approximate, get_random_f32_vec};
 
@@ -28,15 +26,10 @@ use rstest::rstest;
 #[case::square(Array::square_in_place, |x| x * x)]
 #[case::abs(Array::abs_in_place, f32::abs)]
 // #[case::exp(Array1D::exp_in_place, f32::exp)]
-fn in_place<C>(
-    #[case] test_function: fn(&mut Array<1, C>),
-    #[case] target_function: fn(f32) -> f32,
-)
-where Array<1, C>: From<Vec<f32>> + Into<Vec<f32>>
-{
+fn in_place(#[case] test_function: fn(&mut Array<1>), #[case] target_function: fn(f32) -> f32) {
     for i in 0..64 {
         let data1 = get_random_f32_vec(0, i);
-        let mut array1: Array<1, C> = data1.clone().into();
+        let mut array1: Array<1> = data1.clone().into();
 
         test_function(&mut array1);
         let result: Vec<f32> = array1.into();
@@ -53,16 +46,15 @@ where Array<1, C>: From<Vec<f32>> + Into<Vec<f32>>
 #[case::abs(Array::abs_in_place_masked, f32::abs)]
 // #[case::exp(Array1D::exp_in_place, f32::exp)]
 fn in_place_masked(
-    #[case] test_function: fn(&mut Array<1, Vec<__m512>>, &Mask<1>),
+    #[case] test_function: fn(&mut Array<1>, &Mask<1>),
     #[case] target_function: fn(f32) -> f32,
-)
-{
+) {
     for i in 0..64 {
         let data1 = get_random_f32_vec(0, i);
-        let mut array1: Array<1, Vec<__m512>> = data1.clone().into();
+        let mut array1: Array<1> = data1.clone().into();
 
         let data2 = get_random_f32_vec(1, i);
-        let array2: Array<1, Vec<__m512>> = data2.clone().into();
+        let array2: Array<1> = data2.clone().into();
         let mask = array1.compare_greater_than(&array2);
         mask.assert_invariants_satisfied();
 
@@ -84,15 +76,13 @@ fn in_place_masked(
 #[case::square(Array::square, |x| x * x)]
 #[case::abs(Array::abs, f32::abs)]
 // #[case::exp(Array1D::exp, f32::exp)]
-fn ref_out_of_place<C>(
-    #[case] test_function: fn(&Array<1, C>) -> Array<1, C>,
+fn ref_out_of_place(
+    #[case] test_function: fn(&Array<1>) -> Array<1>,
     #[case] target_function: fn(f32) -> f32,
-) where
-    Array<1, C>: From<Vec<f32>> + Into<Vec<f32>>
-{
+) {
     for i in 0..64 {
         let data = get_random_f32_vec(0, i);
-        let array: Array<1, C> = data.clone().into();
+        let array: Array<1> = data.clone().into();
         let result: Vec<f32> = test_function(&array).into();
 
         for (d, r) in data.iter().zip(result.iter()) {

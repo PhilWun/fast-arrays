@@ -1,10 +1,8 @@
-use std::arch::x86_64::__m512;
-
 use fast_arrays::{Array, Mask};
 
 #[allow(dead_code)]
 fn array_example() {
-    let mut array = Array::zeros(&[3, 4]);
+    let mut array = Array::<2>::zeros(&[3, 4]);
 
     for i in 0..3 {
         for j in 0..4 {
@@ -16,7 +14,7 @@ fn array_example() {
 
     println!("{}", json_str);
 
-    let de_array: Array<2, Vec<__m512>> = serde_json::from_str(&json_str).unwrap();
+    let de_array: Array<2> = serde_json::from_str(&json_str).unwrap();
 
     for i in 0..3 {
         for j in 0..4 {
@@ -28,7 +26,7 @@ fn array_example() {
 }
 
 fn mask_example() {
-    let mut array = Array::zeros(&[3, 4]);
+    let mut array = Array::<2>::zeros(&[3, 4]);
 
     for i in 0..3 {
         for j in 0..4 {

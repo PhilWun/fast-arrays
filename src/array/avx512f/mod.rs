@@ -28,11 +28,15 @@ use std::{
         _mm512_mask_mul_ps, _mm512_mask_sqrt_ps, _mm512_mask_sub_ps, _mm512_max_ps, _mm512_min_ps,
         _mm512_mul_ps, _mm512_mul_round_ps, _mm512_mullo_epi32, _mm512_slli_epi32, _mm512_sqrt_ps,
         _mm512_sub_ps, _MM_FROUND_NO_EXC, _MM_FROUND_TO_NEAREST_INT,
-    }, ops::{Deref, DerefMut}, simd::{f32x16, u32x16}
+    },
+    simd::{f32x16, u32x16},
 };
 
 use rand::prelude::*;
-use serde::{ser::{Serialize, SerializeSeq, SerializeStruct}, Deserialize};
+use serde::{
+    ser::{Serialize, SerializeSeq, SerializeStruct},
+    Deserialize,
+};
 
 use crate::{Array, Mask};
 
@@ -56,8 +60,7 @@ fn array_to_m512i(value: [u32; 16]) -> __m512i {
     value.into()
 }
 
-fn assert_same_shape2<const D: usize, C, E>(a: &Array<D, C>, b: &Array<D, E>)
-{
+fn assert_same_shape2<const D: usize>(a: &Array<D>, b: &Array<D>) {
     assert_eq!(
         a.shape, b.shape,
         "the lengths of array one and two don't match: {:?} != {:?}",
@@ -65,8 +68,7 @@ fn assert_same_shape2<const D: usize, C, E>(a: &Array<D, C>, b: &Array<D, E>)
     );
 }
 
-fn assert_same_shape_mask<const D: usize, C>(a: &Array<D, C>, mask: &Mask<D>)
-{
+fn assert_same_shape_mask<const D: usize>(a: &Array<D>, mask: &Mask<D>) {
     assert_eq!(
         &a.shape,
         mask.get_shape(),
@@ -76,8 +78,7 @@ fn assert_same_shape_mask<const D: usize, C>(a: &Array<D, C>, mask: &Mask<D>)
     );
 }
 
-fn assert_same_shape_with_mask2<const D: usize, C, E>(a: &Array<D, C>, b: &Array<D, E>, mask: &Mask<D>)
-{
+fn assert_same_shape_with_mask2<const D: usize>(a: &Array<D>, b: &Array<D>, mask: &Mask<D>) {
     assert_eq!(
         a.shape, b.shape,
         "the lengths of array one and two don't match: {:?} != {:?}",
@@ -92,8 +93,7 @@ fn assert_same_shape_with_mask2<const D: usize, C, E>(a: &Array<D, C>, b: &Array
     );
 }
 
-fn assert_same_shape3<const D: usize, C, E, F>(a: &Array<D, C>, b: &Array<D, E>, c: &Array<D, F>)
-{
+fn assert_same_shape3<const D: usize>(a: &Array<D>, b: &Array<D>, c: &Array<D>) {
     assert_eq!(
         a.shape, b.shape,
         "the lengths of array one and two don't match: {:?} != {:?}",
@@ -106,13 +106,12 @@ fn assert_same_shape3<const D: usize, C, E, F>(a: &Array<D, C>, b: &Array<D, E>,
     );
 }
 
-fn assert_same_shape_with_mask3<const D: usize, C, E, F>(
-    a: &Array<D, C>,
-    b: &Array<D, E>,
-    c: &Array<D, F>,
+fn assert_same_shape_with_mask3<const D: usize>(
+    a: &Array<D>,
+    b: &Array<D>,
+    c: &Array<D>,
     mask: &Mask<D>,
-)
-{
+) {
     assert_eq!(
         a.shape, b.shape,
         "the lengths of array one and two don't match: {:?} != {:?}",
@@ -172,11 +171,9 @@ fn calculate_register_count(shape: &[usize]) -> usize {
     register_count
 }
 
-struct DataSerializeWrapper<'a, const D: usize, C>(&'a Array<D, C>)
-where
-    C: Deref<Target = [__m512]> + Clone;
+struct DataSerializeWrapper<'a, const D: usize>(&'a Array<D>);
 
-impl<'a, const D: usize, C: Deref<Target = [__m512]> + Clone> Serialize for DataSerializeWrapper<'a, D, C> {
+impl<'a, const D: usize> Serialize for DataSerializeWrapper<'a, D> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -201,10 +198,7 @@ impl<'a, const D: usize, C: Deref<Target = [__m512]> + Clone> Serialize for Data
     }
 }
 
-impl<const D: usize, C> Serialize for Array<D, C>
-where 
-C: Deref<Target = [__m512]> + Clone
-{
+impl<const D: usize> Serialize for Array<D> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -225,10 +219,10 @@ struct ArrayDeserializerProxy {
     shape: Vec<usize>,
 }
 
-impl<'de, const D: usize> Deserialize<'de> for Array<D, Vec<__m512>> {
+impl<'de, const D: usize> Deserialize<'de> for Array<D> {
     fn deserialize<De>(deserializer: De) -> Result<Self, De::Error>
     where
-        De: serde::Deserializer<'de>
+        De: serde::Deserializer<'de>,
     {
         let proxy = ArrayDeserializerProxy::deserialize(deserializer)?;
         assert_eq!(proxy.shape.len(), D);
@@ -267,49 +261,24 @@ impl<'de, const D: usize> Deserialize<'de> for Array<D, Vec<__m512>> {
     }
 }
 
-impl<const D: usize, C> Array<D, C> {
-    pub fn random_seed() -> [u32; 16] {
-        let mut rng = SmallRng::from_entropy();
-        let mut seed = [0; 16];
-
-        for i in 0..16 {
-            seed[i] = rng.next_u32();
-        }
-
-        seed
-    }
-}
-
-impl<const D: usize> Array<D, Vec<__m512>> {
-    pub fn zeros(shape: &[usize; D]) -> Array<D, Vec<__m512>> {
+impl<const D: usize> Array<D> {
+    pub fn zeros(shape: &[usize; D]) -> Self {
         Self::new_from_value(shape, 0.0)
     }
 
-    pub fn new_from_value(shape: &[usize; D], value: f32) -> Array<D, Vec<__m512>> {
+    pub fn new_from_value(shape: &[usize; D], value: f32) -> Self {
         assert!(D > 0);
 
         let register_count = calculate_register_count(shape);
         let zero = array_to_m512([value; 16]);
         let data = vec![zero; register_count];
 
-        Array {
+        Self {
             data,
             shape: *shape,
         }
     }
 
-    pub fn random_uniform(shape: &[usize; D], seed: [u32; 16]) -> Array<D, Vec<__m512>> {
-        let mut new_array = Self::zeros(shape);
-        new_array.random_uniform_in_place(seed);
-
-        new_array
-    }
-}
-
-impl<const D: usize, C> Array<D, C>
-where
-C: Deref<Target = [__m512]> + Clone
-{
     pub fn assert_invariants_satisfied(&self) {
         // check number of registers
         let registers_per_row = self.shape.last().unwrap().div_ceil(16);
@@ -326,482 +295,24 @@ C: Deref<Target = [__m512]> + Clone
         );
     }
 
-    // TODO: more out_of_place functions
+    pub fn random_seed() -> [u32; 16] {
+        let mut rng = SmallRng::from_entropy();
+        let mut seed = [0; 16];
 
-    pub fn add<E>(&self, other: &Array<D, E>) -> Array<D, Vec<__m512>>
-    where
-        E: Deref<Target = [__m512]>,
-    {
-        let mut new_array = self.clone();
-        new_array.add_in_place(other);
-
-        new_array
-    }
-
-    pub fn add_out_of_place<E, F>(&self, other: &Array<D, E>, output: &mut Array<D, F>)
-    where
-        E: Deref<Target = [__m512]>,
-        F: DerefMut<Target = [__m512]>,
-    {
-        assert_same_shape3(&self, &other, &output);
-
-        unsafe {
-            for ((l, r), o) in self
-                .data
-                .iter()
-                .zip(other.data.iter())
-                .zip(output.data.iter_mut())
-            {
-                *o = _mm512_add_ps(*l, *r);
-            }
-        }
-    }
-
-    pub fn sub<E>(&self, other: &Array<D, E>) -> Array<D, Vec<__m512>>
-    where
-        E: Deref<Target = [__m512]>,
-    {
-        let mut new_array = self.clone();
-        new_array.sub_in_place(other);
-
-        new_array
-    }
-
-    pub fn sub_out_of_place<E, F>(&self, other: &Array<D, E>, output: &mut Array<D, F>)
-    where
-        E: Deref<Target = [__m512]>,
-        F: DerefMut<Target = [__m512]>,
-    {
-        assert_same_shape3(&self, &other, &output);
-
-        unsafe {
-            for ((l, r), o) in self
-                .data
-                .iter()
-                .zip(other.data.iter())
-                .zip(output.data.iter_mut())
-            {
-                *o = _mm512_sub_ps(*l, *r);
-            }
-        }
-    }
-
-    pub fn mul<E>(&self, other: &Array<D, E>) -> Array<D, Vec<__m512>>
-    where
-        E: Deref<Target = [__m512]>,
-    {
-        let mut new_array = self.clone();
-        new_array.mul_in_place(other);
-
-        new_array
-    }
-
-    pub fn mul_out_of_place<E, F>(&self, other: &Array<D, E>, output: &mut Array<D, F>)
-    where
-        E: Deref<Target = [__m512]>,
-        F: DerefMut<Target = [__m512]>,
-    {
-        assert_same_shape3(&self, &other, &output);
-
-        unsafe {
-            for ((l, r), o) in self
-                .data
-                .iter()
-                .zip(other.data.iter())
-                .zip(output.data.iter_mut())
-            {
-                *o = _mm512_mul_ps(*l, *r);
-            }
-        }
-    }
-
-    pub fn div<E>(&self, other: &Array<D, E>) -> Array<D, Vec<__m512>>
-    where
-        E: Deref<Target = [__m512]>,
-    {
-        let mut new_array = self.clone();
-        new_array.div_in_place(other);
-
-        new_array
-    }
-
-    pub fn div_out_of_place<E, F>(&self, other: &Array<D, E>, output: &mut Array<D, F>)
-    where
-        E: Deref<Target = [__m512]>,
-        F: DerefMut<Target = [__m512]>,
-    {
-        assert_same_shape3(&self, &other, &output);
-
-        unsafe {
-            for ((l, r), o) in self
-                .data
-                .iter()
-                .zip(other.data.iter())
-                .zip(output.data.iter_mut())
-            {
-                *o = _mm512_div_ps(*l, *r);
-            }
-        }
-    }
-
-    pub fn max<E>(&self, other: &Array<D, E>) -> Array<D, Vec<__m512>>
-    where
-        E: Deref<Target = [__m512]>,
-    {
-        let mut new_array = self.clone();
-        new_array.max_in_place(other);
-
-        new_array
-    }
-
-    pub fn max_out_of_place<E, F>(&self, other: &Array<D, E>, output: &mut Array<D, F>)
-    where
-        E: Deref<Target = [__m512]>,
-        F: DerefMut<Target = [__m512]>,
-    {
-        assert_same_shape3(&self, &other, &output);
-
-        unsafe {
-            for ((l, r), o) in self
-                .data
-                .iter()
-                .zip(other.data.iter())
-                .zip(output.data.iter_mut())
-            {
-                *o = _mm512_max_ps(*l, *r);
-            }
-        }
-    }
-
-    pub fn max_scalar(&self, scalar: f32) -> Array<D, Vec<__m512>> {
-        let mut new_array = self.clone();
-        new_array.max_scalar_in_place(scalar);
-
-        new_array
-    }
-
-    pub fn min<E>(&self, other: &Array<D, E>) -> Array<D, Vec<__m512>>
-    where
-        E: Deref<Target = [__m512]>,
-    {
-        let mut new_array = self.clone();
-        new_array.min_in_place(other);
-
-        new_array
-    }
-
-    pub fn min_out_of_place<E, F>(&self, other: &Array<D, E>, output: &mut Array<D, F>)
-    where
-        E: Deref<Target = [__m512]>,
-        F: DerefMut<Target = [__m512]>,
-    {
-        assert_same_shape3(&self, &other, &output);
-
-        unsafe {
-            for ((l, r), o) in self
-                .data
-                .iter()
-                .zip(other.data.iter())
-                .zip(output.data.iter_mut())
-            {
-                *o = _mm512_min_ps(*l, *r);
-            }
-        }
-    }
-
-    pub fn min_scalar(&self, scalar: f32) -> Array<D, Vec<__m512>> {
-        let mut new_array = self.clone();
-        new_array.min_scalar_in_place(scalar);
-
-        new_array
-    }
-
-    pub fn add_scalar(&self, scalar: f32) -> Array<D, Vec<__m512>> {
-        let mut new_array = self.clone();
-        new_array.add_scalar_in_place(scalar);
-
-        new_array
-    }
-
-    pub fn sub_scalar(&self, scalar: f32) -> Array<D, Vec<__m512>> {
-        let mut new_array = self.clone();
-        new_array.sub_scalar_in_place(scalar);
-
-        new_array
-    }
-
-    pub fn mul_scalar(&self, scalar: f32) -> Array<D, Vec<__m512>> {
-        let mut new_array = self.clone();
-        new_array.mul_scalar_in_place(scalar);
-
-        new_array
-    }
-
-    pub fn div_scalar(&self, scalar: f32) -> Array<D, Vec<__m512>> {
-        let mut new_array = self.clone();
-        new_array.div_scalar_in_place(scalar);
-
-        new_array
-    }
-
-    pub fn fmadd(&self, a: &Self, b: &Self) -> Array<D, Vec<__m512>> {
-        let mut new_array = self.clone();
-        new_array.fmadd_in_place(a, b);
-
-        new_array
-    }
-
-    pub fn fmadd_scalar<E>(&self, a: &Array<D, E>, scalar: f32) -> Array<D, Vec<__m512>>
-    where
-        E: Deref<Target = [__m512]>,
-    {
-        let mut new_array = self.clone();
-        new_array.fmadd_scalar_in_place(a, scalar);
-
-        new_array
-    }
-
-    pub fn sqrt(&self) -> Array<D, Vec<__m512>> {
-        let mut new_array = self.clone();
-        new_array.sqrt_in_place();
-
-        new_array
-    }
-
-    pub fn square(&self) -> Array<D, Vec<__m512>> {
-        let mut new_array = self.clone();
-        new_array.square_in_place();
-
-        new_array
-    }
-
-    pub fn abs(&self) -> Array<D, Vec<__m512>> {
-        let mut new_array = self.clone();
-        new_array.abs_in_place();
-
-        new_array
-    }
-
-    fn compare<E>(
-        a: &Array<D, C>,
-        b: &Array<D, E>,
-        func: unsafe fn(__m512, __m512) -> __mmask16,
-    ) -> Mask<D>
-    where
-        E: Deref<Target = [__m512]>,
-    {
-        assert_same_shape2(a, b);
-        let mut masks = Vec::with_capacity(a.data.len());
-
-        unsafe {
-            for (d1, d2) in a.data.iter().zip(b.data.iter()) {
-                masks.push(func(*d1, *d2));
-            }
+        for i in 0..16 {
+            seed[i] = rng.next_u32();
         }
 
-        Mask::new_from_data(a.shape, masks)
+        seed
     }
 
-    fn compare_in_place<E>(
-        a: &Array<D, C>,
-        b: &Array<D, E>,
-        mask: &mut Mask<D>,
-        func: unsafe fn(__m512, __m512) -> __mmask16,
-    )
-    where
-        E: Deref<Target = [__m512]>,
-    {
-        assert_same_shape_with_mask2(a, b, mask);
+    pub fn random_uniform(shape: &[usize; D], seed: [u32; 16]) -> Self {
+        let mut new_array = Self::zeros(shape);
+        new_array.random_uniform_in_place(seed);
 
-        unsafe {
-            for ((d1, d2), m) in a
-                .data
-                .iter()
-                .zip(b.data.iter())
-                .zip(mask.get_masks_mut().iter_mut())
-            {
-                *m = func(*d1, *d2);
-            }
-        }
+        new_array
     }
 
-    fn compare_scalar(
-        a: &Array<D, C>,
-        scalar: f32,
-        func: unsafe fn(__m512, __m512) -> __mmask16,
-    ) -> Mask<D> {
-        let scalar = array_to_m512([scalar; 16]);
-        let mut masks = Vec::with_capacity(a.data.len());
-
-        unsafe {
-            for d in a.data.iter() {
-                masks.push(func(*d, scalar));
-            }
-        }
-
-        Mask::new_from_data(a.shape, masks)
-    }
-
-    fn compare_scalar_in_place(
-        a: &Array<D, C>,
-        scalar: f32,
-        mask: &mut Mask<D>,
-        func: unsafe fn(__m512, __m512) -> __mmask16,
-    ) {
-        assert_eq!(&a.shape, mask.get_shape());
-        let scalar = array_to_m512([scalar; 16]);
-
-        unsafe {
-            for (d, m) in a.data.iter().zip(mask.get_masks_mut().iter_mut()) {
-                *m = func(*d, scalar);
-            }
-        }
-    }
-
-    pub fn compare_equal<E>(&self, other: &Array<D, E>) -> Mask<D>
-    where
-        E: Deref<Target = [__m512]>,
-    {
-        Self::compare(self, other, _mm512_cmpeq_ps_mask)
-    }
-
-    pub fn compare_equal_in_place<E>(&self, other: &Array<D, E>, mask: &mut Mask<D>)
-    where
-        E: Deref<Target = [__m512]>,
-    {
-        Self::compare_in_place(self, other, mask, _mm512_cmpeq_ps_mask)
-    }
-
-    pub fn compare_scalar_equal(&self, scalar: f32) -> Mask<D> {
-        Self::compare_scalar(self, scalar, _mm512_cmpeq_ps_mask)
-    }
-
-    pub fn compare_scalar_equal_in_place(&self, scalar: f32, mask: &mut Mask<D>) {
-        Self::compare_scalar_in_place(self, scalar, mask, _mm512_cmpeq_ps_mask)
-    }
-
-    pub fn compare_not_equal<E>(&self, other: &Array<D, E>) -> Mask<D>
-    where
-        E: Deref<Target = [__m512]>,
-    {
-        Self::compare(self, other, _mm512_cmpneq_ps_mask)
-    }
-
-    pub fn compare_not_equal_in_place<E>(&self, other: &Array<D, E>, mask: &mut Mask<D>)
-    where
-        E: Deref<Target = [__m512]>,
-    {
-        Self::compare_in_place(self, other, mask, _mm512_cmpneq_ps_mask)
-    }
-
-    pub fn compare_scalar_not_equal(&self, scalar: f32) -> Mask<D> {
-        Self::compare_scalar(self, scalar, _mm512_cmpneq_ps_mask)
-    }
-
-    pub fn compare_scalar_not_equal_in_place(&self, scalar: f32, mask: &mut Mask<D>) {
-        Self::compare_scalar_in_place(self, scalar, mask, _mm512_cmpneq_ps_mask)
-    }
-
-    pub fn compare_greater_than<E>(&self, other: &Array<D, E>) -> Mask<D>
-    where
-        E: Deref<Target = [__m512]>,
-    {
-        Self::compare(self, other, _mm512_cmpnle_ps_mask)
-    }
-
-    pub fn compare_greater_than_in_place<E>(&self, other: &Array<D, E>, mask: &mut Mask<D>)
-    where
-        E: Deref<Target = [__m512]>,
-    {
-        Self::compare_in_place(self, other, mask, _mm512_cmpnle_ps_mask)
-    }
-
-    pub fn compare_scalar_greater_than(&self, scalar: f32) -> Mask<D> {
-        Self::compare_scalar(self, scalar, _mm512_cmpnle_ps_mask)
-    }
-
-    pub fn compare_scalar_greater_than_in_place(&self, scalar: f32, mask: &mut Mask<D>) {
-        Self::compare_scalar_in_place(self, scalar, mask, _mm512_cmpnle_ps_mask)
-    }
-
-    pub fn compare_greater_than_or_equal<E>(&self, other: &Array<D, E>) -> Mask<D>
-    where
-        E: Deref<Target = [__m512]>,
-    {
-        Self::compare(self, other, _mm512_cmpnlt_ps_mask)
-    }
-
-    pub fn compare_greater_than_or_equal_in_place<E>(&self, other: &Array<D, E>, mask: &mut Mask<D>)
-    where
-        E: Deref<Target = [__m512]>,
-    {
-        Self::compare_in_place(self, other, mask, _mm512_cmpnlt_ps_mask)
-    }
-
-    pub fn compare_scalar_greater_than_or_equal(&self, scalar: f32) -> Mask<D> {
-        Self::compare_scalar(self, scalar, _mm512_cmpnlt_ps_mask)
-    }
-
-    pub fn compare_scalar_greater_than_or_equal_in_place(&self, scalar: f32, mask: &mut Mask<D>) {
-        Self::compare_scalar_in_place(self, scalar, mask, _mm512_cmpnlt_ps_mask)
-    }
-
-    pub fn compare_less_than<E>(&self, other: &Array<D, E>) -> Mask<D>
-    where
-        E: Deref<Target = [__m512]>,
-    {
-        Self::compare(self, other, _mm512_cmplt_ps_mask)
-    }
-
-    pub fn compare_less_than_in_place<E>(&self, other: &Array<D, E>, mask: &mut Mask<D>)
-    where
-        E: Deref<Target = [__m512]>,
-    {
-        Self::compare_in_place(self, other, mask, _mm512_cmplt_ps_mask)
-    }
-
-    pub fn compare_scalar_less_than(&self, scalar: f32) -> Mask<D> {
-        Self::compare_scalar(self, scalar, _mm512_cmplt_ps_mask)
-    }
-
-    pub fn compare_scalar_less_than_in_place(&self, scalar: f32, mask: &mut Mask<D>) {
-        Self::compare_scalar_in_place(self, scalar, mask, _mm512_cmplt_ps_mask)
-    }
-
-    pub fn compare_less_than_or_equal<E>(&self, other: &Array<D, E>) -> Mask<D>
-    where
-        E: Deref<Target = [__m512]>,
-    {
-        Self::compare(self, other, _mm512_cmple_ps_mask)
-    }
-
-    pub fn compare_less_than_or_equal_in_place<E>(&self, other: &Array<D, E>, mask: &mut Mask<D>)
-    where
-        E: Deref<Target = [__m512]>,
-    {
-        Self::compare_in_place(self, other, mask, _mm512_cmple_ps_mask)
-    }
-
-    pub fn compare_scalar_less_than_or_equal(&self, scalar: f32) -> Mask<D> {
-        Self::compare_scalar(self, scalar, _mm512_cmple_ps_mask)
-    }
-
-    pub fn compare_scalar_less_than_or_equal_in_place(&self, scalar: f32, mask: &mut Mask<D>) {
-        Self::compare_scalar_in_place(self, scalar, mask, _mm512_cmple_ps_mask)
-    }
-
-    pub fn exp(&self) -> Array<D, Vec<__m512>> {
-        let mut tmp = self.clone();
-        tmp.exp_in_place();
-
-        tmp
-    }
-}
-
-impl<const D: usize, C> Array<D, C>
-where
-C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
-{
     pub fn random_uniform_in_place(&mut self, seed: [u32; 16]) -> [u32; 16] {
         let mut seed = array_to_m512i(seed);
         let m = array_to_m512i([0x7fffffff; 16]);
@@ -859,10 +370,7 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
         }
     }
 
-    pub fn copy<E>(&mut self, other: &Array<D, E>)
-    where
-        E: Deref<Target = [__m512]>
-    {
+    pub fn copy(&mut self, other: &Array<D>) {
         assert_eq!(self.shape, other.shape);
 
         for (d1, d2) in self.data.iter_mut().zip(other.data.iter()) {
@@ -871,10 +379,7 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
     }
 
     // copy the elements from `other` where `mask` is 1
-    pub fn copy_masked<E>(&mut self, other: &Array<D, E>, mask: &Mask<D>)
-    where
-        E: Deref<Target = [__m512]>
-    {
+    pub fn copy_masked(&mut self, other: &Array<D>, mask: &Mask<D>) {
         assert_same_shape_with_mask2(&self, other, mask);
 
         unsafe {
@@ -890,11 +395,7 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
     }
 
     // copy the elements from `other1` where `mask` is 0 and from `other2` where `mask` is 1
-    pub fn copy_masked2<E, F>(&mut self, other1: &Array<D, E>, other2: &Array<D, F>, mask: &Mask<D>)
-    where
-        E: Deref<Target = [__m512]>,
-        F: Deref<Target = [__m512]>,
-    {
+    pub fn copy_masked2(&mut self, other1: &Array<D>, other2: &Array<D>, mask: &Mask<D>) {
         assert_same_shape_with_mask3(&self, other1, other2, mask);
 
         unsafe {
@@ -909,11 +410,15 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
             }
         }
     }
-    
-    pub fn add_in_place<E>(&mut self, other: &Array<D, E>)
-    where
-        E: Deref<Target = [__m512]>,
-    {
+
+    pub fn add(&self, other: &Self) -> Self {
+        let mut new_array = self.clone();
+        new_array.add_in_place(other);
+
+        new_array
+    }
+
+    pub fn add_in_place(&mut self, other: &Self) {
         assert_same_shape2(&self, &other);
 
         unsafe {
@@ -923,10 +428,7 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
         }
     }
 
-    pub fn add_in_place_masked<E>(&mut self, other: &Array<D, E>, mask: &Mask<D>)
-    where
-        E: Deref<Target = [__m512]>,
-    {
+    pub fn add_in_place_masked(&mut self, other: &Self, mask: &Mask<D>) {
         assert_same_shape_with_mask2(&self, &other, &mask);
 
         unsafe {
@@ -941,10 +443,31 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
         }
     }
 
-    pub fn sub_in_place<E>(&mut self, other: &Array<D, E>)
-    where
-        E: Deref<Target = [__m512]>,
-    {
+    pub fn add_out_of_place(&self, other: &Self, output: &mut Self) {
+        assert_same_shape3(&self, &other, &output);
+
+        unsafe {
+            for ((l, r), o) in self
+                .data
+                .iter()
+                .zip(other.data.iter())
+                .zip(output.data.iter_mut())
+            {
+                *o = _mm512_add_ps(*l, *r);
+            }
+        }
+    }
+
+    // TODO: more out_of_place functions
+
+    pub fn sub(&self, other: &Self) -> Self {
+        let mut new_array = self.clone();
+        new_array.sub_in_place(other);
+
+        new_array
+    }
+
+    pub fn sub_in_place(&mut self, other: &Self) {
         assert_same_shape2(&self, &other);
 
         unsafe {
@@ -954,10 +477,7 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
         }
     }
 
-    pub fn sub_in_place_masked<E>(&mut self, other: &Array<D, E>, mask: &Mask<D>)
-    where
-        E: Deref<Target = [__m512]>,
-    {
+    pub fn sub_in_place_masked(&mut self, other: &Self, mask: &Mask<D>) {
         assert_same_shape_with_mask2(&self, &other, mask);
 
         unsafe {
@@ -972,10 +492,29 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
         }
     }
 
-    pub fn mul_in_place<E>(&mut self, other: &Array<D, E>)
-    where
-        E: Deref<Target = [__m512]>,
-    {
+    pub fn sub_out_of_place(&self, other: &Self, output: &mut Self) {
+        assert_same_shape3(&self, &other, &output);
+
+        unsafe {
+            for ((l, r), o) in self
+                .data
+                .iter()
+                .zip(other.data.iter())
+                .zip(output.data.iter_mut())
+            {
+                *o = _mm512_sub_ps(*l, *r);
+            }
+        }
+    }
+
+    pub fn mul(&self, other: &Self) -> Self {
+        let mut new_array = self.clone();
+        new_array.mul_in_place(other);
+
+        new_array
+    }
+
+    pub fn mul_in_place(&mut self, other: &Self) {
         assert_same_shape2(&self, &other);
 
         unsafe {
@@ -985,10 +524,7 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
         }
     }
 
-    pub fn mul_in_place_masked<E>(&mut self, other: &Array<D, E>, mask: &Mask<D>)
-    where
-        E: Deref<Target = [__m512]>,
-    {
+    pub fn mul_in_place_masked(&mut self, other: &Self, mask: &Mask<D>) {
         assert_same_shape_with_mask2(&self, &other, mask);
 
         unsafe {
@@ -1003,10 +539,29 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
         }
     }
 
-    pub fn div_in_place<E>(&mut self, other: &Array<D, E>)
-    where
-        E: Deref<Target = [__m512]>,
-    {
+    pub fn mul_out_of_place(&self, other: &Self, output: &mut Self) {
+        assert_same_shape3(&self, &other, &output);
+
+        unsafe {
+            for ((l, r), o) in self
+                .data
+                .iter()
+                .zip(other.data.iter())
+                .zip(output.data.iter_mut())
+            {
+                *o = _mm512_mul_ps(*l, *r);
+            }
+        }
+    }
+
+    pub fn div(&self, other: &Self) -> Self {
+        let mut new_array = self.clone();
+        new_array.div_in_place(other);
+
+        new_array
+    }
+
+    pub fn div_in_place(&mut self, other: &Self) {
         assert_same_shape2(&self, &other);
 
         unsafe {
@@ -1016,10 +571,7 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
         }
     }
 
-    pub fn div_in_place_masked<E>(&mut self, other: &Array<D, E>, mask: &Mask<D>)
-    where
-        E: Deref<Target = [__m512]>,
-    {
+    pub fn div_in_place_masked(&mut self, other: &Self, mask: &Mask<D>) {
         assert_same_shape_with_mask2(&self, &other, mask);
 
         unsafe {
@@ -1034,10 +586,29 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
         }
     }
 
-    pub fn max_in_place<E>(&mut self, other: &Array<D, E>)
-    where
-        E: Deref<Target = [__m512]>,
-    {
+    pub fn div_out_of_place(&self, other: &Self, output: &mut Self) {
+        assert_same_shape3(&self, &other, &output);
+
+        unsafe {
+            for ((l, r), o) in self
+                .data
+                .iter()
+                .zip(other.data.iter())
+                .zip(output.data.iter_mut())
+            {
+                *o = _mm512_div_ps(*l, *r);
+            }
+        }
+    }
+
+    pub fn max(&self, other: &Self) -> Self {
+        let mut new_array = self.clone();
+        new_array.max_in_place(other);
+
+        new_array
+    }
+
+    pub fn max_in_place(&mut self, other: &Self) {
         assert_same_shape2(self, other);
 
         unsafe {
@@ -1047,10 +618,7 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
         }
     }
 
-    pub fn max_in_place_masked<E>(&mut self, other: &Array<D, E>, mask: &Mask<D>)
-    where
-        E: Deref<Target = [__m512]>,
-    {
+    pub fn max_in_place_masked(&mut self, other: &Self, mask: &Mask<D>) {
         assert_same_shape_with_mask2(&self, &other, mask);
 
         unsafe {
@@ -1063,6 +631,28 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
                 *l = _mm512_mask_max_ps(*l, *m, *l, *r);
             }
         }
+    }
+
+    pub fn max_out_of_place(&self, other: &Self, output: &mut Self) {
+        assert_same_shape3(&self, &other, &output);
+
+        unsafe {
+            for ((l, r), o) in self
+                .data
+                .iter()
+                .zip(other.data.iter())
+                .zip(output.data.iter_mut())
+            {
+                *o = _mm512_max_ps(*l, *r);
+            }
+        }
+    }
+
+    pub fn max_scalar(&self, scalar: f32) -> Self {
+        let mut new_array = self.clone();
+        new_array.max_scalar_in_place(scalar);
+
+        new_array
     }
 
     pub fn max_scalar_in_place(&mut self, scalar: f32) {
@@ -1087,10 +677,14 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
         }
     }
 
-    pub fn min_in_place<E>(&mut self, other: &Array<D, E>)
-    where
-        E: Deref<Target = [__m512]>,
-    {
+    pub fn min(&self, other: &Self) -> Self {
+        let mut new_array = self.clone();
+        new_array.min_in_place(other);
+
+        new_array
+    }
+
+    pub fn min_in_place(&mut self, other: &Self) {
         assert_same_shape2(self, other);
 
         unsafe {
@@ -1100,10 +694,7 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
         }
     }
 
-    pub fn min_in_place_masked<E>(&mut self, other: &Array<D, E>, mask: &Mask<D>)
-    where
-        E: Deref<Target = [__m512]>,
-    {
+    pub fn min_in_place_masked(&mut self, other: &Self, mask: &Mask<D>) {
         assert_same_shape_with_mask2(&self, &other, mask);
 
         unsafe {
@@ -1116,6 +707,28 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
                 *l = _mm512_mask_min_ps(*l, *m, *l, *r);
             }
         }
+    }
+
+    pub fn min_out_of_place(&self, other: &Self, output: &mut Self) {
+        assert_same_shape3(&self, &other, &output);
+
+        unsafe {
+            for ((l, r), o) in self
+                .data
+                .iter()
+                .zip(other.data.iter())
+                .zip(output.data.iter_mut())
+            {
+                *o = _mm512_min_ps(*l, *r);
+            }
+        }
+    }
+
+    pub fn min_scalar(&self, scalar: f32) -> Self {
+        let mut new_array = self.clone();
+        new_array.min_scalar_in_place(scalar);
+
+        new_array
     }
 
     pub fn min_scalar_in_place(&mut self, scalar: f32) {
@@ -1140,6 +753,13 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
         }
     }
 
+    pub fn add_scalar(&self, scalar: f32) -> Self {
+        let mut new_array = self.clone();
+        new_array.add_scalar_in_place(scalar);
+
+        new_array
+    }
+
     pub fn add_scalar_in_place(&mut self, scalar: f32) {
         let scalar = array_to_m512([scalar; 16]);
 
@@ -1160,6 +780,13 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
                 *l = _mm512_mask_add_ps(*l, *m, *l, scalar);
             }
         }
+    }
+
+    pub fn sub_scalar(&self, scalar: f32) -> Self {
+        let mut new_array = self.clone();
+        new_array.sub_scalar_in_place(scalar);
+
+        new_array
     }
 
     pub fn sub_scalar_in_place(&mut self, scalar: f32) {
@@ -1184,6 +811,13 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
         }
     }
 
+    pub fn mul_scalar(&self, scalar: f32) -> Self {
+        let mut new_array = self.clone();
+        new_array.mul_scalar_in_place(scalar);
+
+        new_array
+    }
+
     pub fn mul_scalar_in_place(&mut self, scalar: f32) {
         let scalar = array_to_m512([scalar; 16]);
 
@@ -1204,6 +838,13 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
                 *l = _mm512_mask_mul_ps(*l, *m, *l, scalar);
             }
         }
+    }
+
+    pub fn div_scalar(&self, scalar: f32) -> Self {
+        let mut new_array = self.clone();
+        new_array.div_scalar_in_place(scalar);
+
+        new_array
     }
 
     pub fn div_scalar_in_place(&mut self, scalar: f32) {
@@ -1228,11 +869,14 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
         }
     }
 
-    pub fn fmadd_in_place<E, F>(&mut self, a: &Array<D, E>, b: &Array<D, F>)
-    where
-        E: Deref<Target = [__m512]>,
-        F: Deref<Target = [__m512]>,
-    {
+    pub fn fmadd(&self, a: &Self, b: &Self) -> Self {
+        let mut new_array = self.clone();
+        new_array.fmadd_in_place(a, b);
+
+        new_array
+    }
+
+    pub fn fmadd_in_place(&mut self, a: &Self, b: &Self) {
         assert_same_shape3(self, a, b);
 
         unsafe {
@@ -1242,11 +886,7 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
         }
     }
 
-    pub fn fmadd_in_place_masked<E, F>(&mut self, a: &Array<D, E>, b: &Array<D, F>, mask: &Mask<D>)
-    where
-        E: Deref<Target = [__m512]>,
-        F: Deref<Target = [__m512]>,
-    {
+    pub fn fmadd_in_place_masked(&mut self, a: &Self, b: &Self, mask: &Mask<D>) {
         assert_same_shape_with_mask3(self, a, b, mask);
 
         unsafe {
@@ -1262,10 +902,14 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
         }
     }
 
-    pub fn fmadd_scalar_in_place<E>(&mut self, a: &Array<D, E>, scalar: f32)
-    where
-        E: Deref<Target = [__m512]>,
-    {
+    pub fn fmadd_scalar(&self, a: &Self, scalar: f32) -> Self {
+        let mut new_array = self.clone();
+        new_array.fmadd_scalar_in_place(a, scalar);
+
+        new_array
+    }
+
+    pub fn fmadd_scalar_in_place(&mut self, a: &Self, scalar: f32) {
         assert_same_shape2(self, a);
         let scalar_register = array_to_m512([scalar; 16]);
 
@@ -1276,10 +920,7 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
         }
     }
 
-    pub fn fmadd_scalar_in_place_masked<E>(&mut self, a: &Array<D, E>, scalar: f32, mask: &Mask<D>)
-    where
-        E: Deref<Target = [__m512]>,
-    {
+    pub fn fmadd_scalar_in_place_masked(&mut self, a: &Self, scalar: f32, mask: &Mask<D>) {
         assert_same_shape_with_mask2(self, a, mask);
         let scalar_register = array_to_m512([scalar; 16]);
 
@@ -1293,6 +934,13 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
                 *b = _mm512_mask3_fmadd_ps(*a, scalar_register, *b, *m);
             }
         }
+    }
+
+    pub fn sqrt(&self) -> Self {
+        let mut new_array = self.clone();
+        new_array.sqrt_in_place();
+
+        new_array
     }
 
     pub fn sqrt_in_place(&mut self) {
@@ -1311,6 +959,13 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
         }
     }
 
+    pub fn square(&self) -> Self {
+        let mut new_array = self.clone();
+        new_array.square_in_place();
+
+        new_array
+    }
+
     pub fn square_in_place(&mut self) {
         unsafe {
             for d in self.data.iter_mut() {
@@ -1327,6 +982,13 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
         }
     }
 
+    pub fn abs(&self) -> Self {
+        let mut new_array = self.clone();
+        new_array.abs_in_place();
+
+        new_array
+    }
+
     pub fn abs_in_place(&mut self) {
         unsafe {
             for d in self.data.iter_mut() {
@@ -1341,6 +1003,179 @@ C: Deref<Target = [__m512]> + DerefMut<Target = [__m512]> + Clone
                 *d = _mm512_mask_abs_ps(*d, *m, *d);
             }
         }
+    }
+
+    fn compare(
+        a: &Array<D>,
+        b: &Array<D>,
+        func: unsafe fn(__m512, __m512) -> __mmask16,
+    ) -> Mask<D> {
+        assert_same_shape2(a, b);
+        let mut masks = Vec::with_capacity(a.data.len());
+
+        unsafe {
+            for (d1, d2) in a.data.iter().zip(b.data.iter()) {
+                masks.push(func(*d1, *d2));
+            }
+        }
+
+        Mask::new_from_data(a.shape, masks)
+    }
+
+    fn compare_in_place(
+        a: &Array<D>,
+        b: &Array<D>,
+        mask: &mut Mask<D>,
+        func: unsafe fn(__m512, __m512) -> __mmask16,
+    ) {
+        assert_same_shape_with_mask2(a, b, mask);
+
+        unsafe {
+            for ((d1, d2), m) in a
+                .data
+                .iter()
+                .zip(b.data.iter())
+                .zip(mask.get_masks_mut().iter_mut())
+            {
+                *m = func(*d1, *d2);
+            }
+        }
+    }
+
+    fn compare_scalar(
+        a: &Array<D>,
+        scalar: f32,
+        func: unsafe fn(__m512, __m512) -> __mmask16,
+    ) -> Mask<D> {
+        let scalar = array_to_m512([scalar; 16]);
+        let mut masks = Vec::with_capacity(a.data.len());
+
+        unsafe {
+            for d in a.data.iter() {
+                masks.push(func(*d, scalar));
+            }
+        }
+
+        Mask::new_from_data(a.shape, masks)
+    }
+
+    fn compare_scalar_in_place(
+        a: &Array<D>,
+        scalar: f32,
+        mask: &mut Mask<D>,
+        func: unsafe fn(__m512, __m512) -> __mmask16,
+    ) {
+        assert_eq!(&a.shape, mask.get_shape());
+        let scalar = array_to_m512([scalar; 16]);
+
+        unsafe {
+            for (d, m) in a.data.iter().zip(mask.get_masks_mut().iter_mut()) {
+                *m = func(*d, scalar);
+            }
+        }
+    }
+
+    pub fn compare_equal(&self, other: &Self) -> Mask<D> {
+        Self::compare(self, other, _mm512_cmpeq_ps_mask)
+    }
+
+    pub fn compare_equal_in_place(&self, other: &Self, mask: &mut Mask<D>) {
+        Self::compare_in_place(self, other, mask, _mm512_cmpeq_ps_mask)
+    }
+
+    pub fn compare_scalar_equal(&self, scalar: f32) -> Mask<D> {
+        Self::compare_scalar(self, scalar, _mm512_cmpeq_ps_mask)
+    }
+
+    pub fn compare_scalar_equal_in_place(&self, scalar: f32, mask: &mut Mask<D>) {
+        Self::compare_scalar_in_place(self, scalar, mask, _mm512_cmpeq_ps_mask)
+    }
+
+    pub fn compare_not_equal(&self, other: &Self) -> Mask<D> {
+        Self::compare(self, other, _mm512_cmpneq_ps_mask)
+    }
+
+    pub fn compare_not_equal_in_place(&self, other: &Self, mask: &mut Mask<D>) {
+        Self::compare_in_place(self, other, mask, _mm512_cmpneq_ps_mask)
+    }
+
+    pub fn compare_scalar_not_equal(&self, scalar: f32) -> Mask<D> {
+        Self::compare_scalar(self, scalar, _mm512_cmpneq_ps_mask)
+    }
+
+    pub fn compare_scalar_not_equal_in_place(&self, scalar: f32, mask: &mut Mask<D>) {
+        Self::compare_scalar_in_place(self, scalar, mask, _mm512_cmpneq_ps_mask)
+    }
+
+    pub fn compare_greater_than(&self, other: &Self) -> Mask<D> {
+        Self::compare(self, other, _mm512_cmpnle_ps_mask)
+    }
+
+    pub fn compare_greater_than_in_place(&self, other: &Self, mask: &mut Mask<D>) {
+        Self::compare_in_place(self, other, mask, _mm512_cmpnle_ps_mask)
+    }
+
+    pub fn compare_scalar_greater_than(&self, scalar: f32) -> Mask<D> {
+        Self::compare_scalar(self, scalar, _mm512_cmpnle_ps_mask)
+    }
+
+    pub fn compare_scalar_greater_than_in_place(&self, scalar: f32, mask: &mut Mask<D>) {
+        Self::compare_scalar_in_place(self, scalar, mask, _mm512_cmpnle_ps_mask)
+    }
+
+    pub fn compare_greater_than_or_equal(&self, other: &Self) -> Mask<D> {
+        Self::compare(self, other, _mm512_cmpnlt_ps_mask)
+    }
+
+    pub fn compare_greater_than_or_equal_in_place(&self, other: &Self, mask: &mut Mask<D>) {
+        Self::compare_in_place(self, other, mask, _mm512_cmpnlt_ps_mask)
+    }
+
+    pub fn compare_scalar_greater_than_or_equal(&self, scalar: f32) -> Mask<D> {
+        Self::compare_scalar(self, scalar, _mm512_cmpnlt_ps_mask)
+    }
+
+    pub fn compare_scalar_greater_than_or_equal_in_place(&self, scalar: f32, mask: &mut Mask<D>) {
+        Self::compare_scalar_in_place(self, scalar, mask, _mm512_cmpnlt_ps_mask)
+    }
+
+    pub fn compare_less_than(&self, other: &Self) -> Mask<D> {
+        Self::compare(self, other, _mm512_cmplt_ps_mask)
+    }
+
+    pub fn compare_less_than_in_place(&self, other: &Self, mask: &mut Mask<D>) {
+        Self::compare_in_place(self, other, mask, _mm512_cmplt_ps_mask)
+    }
+
+    pub fn compare_scalar_less_than(&self, scalar: f32) -> Mask<D> {
+        Self::compare_scalar(self, scalar, _mm512_cmplt_ps_mask)
+    }
+
+    pub fn compare_scalar_less_than_in_place(&self, scalar: f32, mask: &mut Mask<D>) {
+        Self::compare_scalar_in_place(self, scalar, mask, _mm512_cmplt_ps_mask)
+    }
+
+    pub fn compare_less_than_or_equal(&self, other: &Self) -> Mask<D> {
+        Self::compare(self, other, _mm512_cmple_ps_mask)
+    }
+
+    pub fn compare_less_than_or_equal_in_place(&self, other: &Self, mask: &mut Mask<D>) {
+        Self::compare_in_place(self, other, mask, _mm512_cmple_ps_mask)
+    }
+
+    pub fn compare_scalar_less_than_or_equal(&self, scalar: f32) -> Mask<D> {
+        Self::compare_scalar(self, scalar, _mm512_cmple_ps_mask)
+    }
+
+    pub fn compare_scalar_less_than_or_equal_in_place(&self, scalar: f32, mask: &mut Mask<D>) {
+        Self::compare_scalar_in_place(self, scalar, mask, _mm512_cmple_ps_mask)
+    }
+
+    pub fn exp(&self) -> Self {
+        let mut tmp = self.clone();
+        tmp.exp_in_place();
+
+        tmp
     }
 
     pub fn exp_in_place(&mut self) {

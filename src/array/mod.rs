@@ -22,7 +22,7 @@ mod avx512f;
 #[cfg(not(all(target_arch = "x86_64", target_feature = "avx512f")))]
 mod fallback;
 
-impl<const D: usize, C> Array<D, C> {
+impl<const D: usize> Array<D> {
     pub fn get_shape(&self) -> [usize; D] {
         self.shape
     }
